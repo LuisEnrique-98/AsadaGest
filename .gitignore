@@ -1,0 +1,24 @@
+# Build outputs
+bin/
+obj/
+out/
+
+# Visual Studio / Rider / VS Code
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+
+# Secretos locales (nunca versionar contraseñas ni cadenas de conexión reales)
+appsettings.Local.json
+appsettings.*.Local.json
+*.env
+.env
+
+# Logs
+*.log
+
+# macOS / Windows basura de sistema de archivos
+.DS_Store
+Thumbs.db

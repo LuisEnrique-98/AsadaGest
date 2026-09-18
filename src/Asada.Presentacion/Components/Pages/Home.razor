@@ -1,0 +1,52 @@
+@page "/"
+@attribute [Authorize]
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.EntityFrameworkCore
+@using Asada.Dominio.Entidades
+@using Asada.Infraestructura.Persistence
+
+@inject AsadaDbContext Db
+
+<PageTitle>Inicio</PageTitle>
+
+<h1>Bienvenido, @nombreUsuario</h1>
+
+@if (organizacion is not null)
+{
+    <p>Ha iniciado sesion en <strong>@organizacion.Nombre</strong> (@organizacion.Codigo).</p>
+}
+else
+{
+    <p>Ha iniciado sesion como <strong>Superadministrador</strong> de la plataforma.</p>
+}
+
+<p class="text-muted">Sprint 0 completado: autenticacion, organizaciones y el aislamiento multiorganizacion ya estan funcionando.</p>
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState>? EstadoAutenticacionTask { get; set; }
+
+    private string nombreUsuario = "";
+    private Organizacion? organizacion;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var estado = await EstadoAutenticacionTask!;
+        var usuario = estado.User;
+
+        nombreUsuario = usuario.FindFirst(ClaimTypes.GivenName)?.Value
+            ?? usuario.Identity?.Name
+            ?? "usuario";
+
+        var idUsuarioTexto = usuario.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (idUsuarioTexto is not null && int.TryParse(idUsuarioTexto, out var idUsuario))
+        {
+            organizacion = await Db.Users
+                .Where(u => u.Id == idUsuario)
+                .Select(u => u.Organizacion)
+                .FirstOrDefaultAsync();
+        }
+    }
+}

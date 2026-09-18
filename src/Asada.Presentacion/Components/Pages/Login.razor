@@ -1,0 +1,82 @@
+@page "/cuenta/iniciar-sesion"
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Identity
+@using Asada.Infraestructura.Identidad
+
+@inject SignInManager<Usuario> SignInManager
+@inject NavigationManager NavigationManager
+
+<PageTitle>Iniciar sesion</PageTitle>
+
+<div class="row justify-content-center mt-5">
+    <div class="col-md-4">
+        <h1 class="mb-4">Sistema de Gestion ASADA</h1>
+
+        <EditForm Model="Modelo" method="post" OnValidSubmit="IniciarSesionAsync" FormName="iniciar-sesion">
+            <AntiforgeryToken />
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" role="alert" />
+
+            @if (mensajeError is not null)
+            {
+                <div class="alert alert-danger" role="alert">@mensajeError</div>
+            }
+
+            <div class="mb-3">
+                <label for="correo" class="form-label">Correo</label>
+                <InputText id="correo" class="form-control" @bind-Value="Modelo.Correo"
+                           autocomplete="username" aria-required="true" />
+                <ValidationMessage For="() => Modelo.Correo" class="text-danger" />
+            </div>
+
+            <div class="mb-3">
+                <label for="contrasena" class="form-label">Contrasena</label>
+                <InputText id="contrasena" type="password" class="form-control" @bind-Value="Modelo.Contrasena"
+                           autocomplete="current-password" aria-required="true" />
+                <ValidationMessage For="() => Modelo.Contrasena" class="text-danger" />
+            </div>
+
+            <div class="mb-3 form-check">
+                <InputCheckbox id="recordarme" class="form-check-input" @bind-Value="Modelo.Recordarme" />
+                <label for="recordarme" class="form-check-label">Recordarme</label>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100">Ingresar</button>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    private string? mensajeError;
+
+    [SupplyParameterFromForm(FormName = "iniciar-sesion")]
+    private ModeloIngreso Modelo { get; set; } = new();
+
+    private async Task IniciarSesionAsync()
+    {
+        var resultado = await SignInManager.PasswordSignInAsync(
+            Modelo.Correo, Modelo.Contrasena, Modelo.Recordarme, lockoutOnFailure: true);
+
+        if (resultado.Succeeded)
+        {
+            NavigationManager.NavigateTo("/", forceLoad: true);
+            return;
+        }
+
+        mensajeError = resultado.IsLockedOut
+            ? "Esta cuenta esta bloqueada temporalmente por demasiados intentos fallidos."
+            : "Correo o contrasena incorrectos.";
+    }
+
+    private sealed class ModeloIngreso
+    {
+        [Required(ErrorMessage = "Ingrese su correo.")]
+        [EmailAddress(ErrorMessage = "El correo no es valido.")]
+        public string Correo { get; set; } = "";
+
+        [Required(ErrorMessage = "Ingrese su contrasena.")]
+        public string Contrasena { get; set; } = "";
+
+        public bool Recordarme { get; set; }
+    }
+}

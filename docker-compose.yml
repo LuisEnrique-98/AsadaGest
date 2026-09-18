@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: asada_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: asada_gestion
+      POSTGRES_USER: asada
+      POSTGRES_PASSWORD: asada_dev_local
+    ports:
+      - "5432:5432"
+    volumes:
+      - asada_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U asada -d asada_gestion"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  asada_postgres_data:

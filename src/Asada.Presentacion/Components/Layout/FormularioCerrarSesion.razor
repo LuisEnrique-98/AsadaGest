@@ -1,0 +1,9 @@
+@* Boton de cierre de sesion, incluido en MainLayout. No tiene @@page: no es una pagina
+   propia, es un componente que se embebe donde haga falta un boton de "Cerrar sesion".
+   Es un formulario HTML normal (no un EditForm) que postea al endpoint minimal API
+   registrado en Program.cs -- ese endpoint es el que realmente cierra la sesion. *@
+
+<form action="/cuenta/cerrar-sesion" method="post">
+    <AntiforgeryToken />
+    <button type="submit" class="nav-link btn btn-link">Cerrar sesion</button>
+</form>

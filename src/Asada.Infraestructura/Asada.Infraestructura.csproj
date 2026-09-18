@@ -1,0 +1,32 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Asada.Aplicacion\Asada.Aplicacion.csproj" />
+    <ProjectReference Include="..\Asada.Dominio\Asada.Dominio.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+    <ItemGroup>
+        <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    </ItemGroup>
+
+  <ItemGroup>
+    <!-- Proveedor de EF Core para PostgreSQL. -->
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.*" />
+    <!-- Traduce las propiedades PascalCase de C# a snake_case en PostgreSQL automaticamente. -->
+    <PackageReference Include="EFCore.NamingConventions" Version="8.0.*" />
+    <!-- Autenticacion: ASP.NET Core Identity con almacenamiento en EF Core. -->
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.*" />
+    <!-- Herramientas de diseno de EF Core (necesarias para "dotnet ef migrations add"). -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.*">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+</Project>
