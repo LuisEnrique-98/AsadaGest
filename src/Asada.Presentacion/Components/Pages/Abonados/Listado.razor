@@ -1,0 +1,115 @@
+@page "/abonados"
+@attribute [Authorize]
+@using Microsoft.AspNetCore.Authorization
+@using Asada.Aplicacion.Common
+
+@inject BuscarAbonadosCasoUso Buscar
+
+<PageTitle>Abonados</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="mb-0">Abonados</h1>
+    <AuthorizeView Roles="Administrador,Operador">
+        <a class="btn btn-primary" href="abonados/nuevo">Nuevo abonado</a>
+    </AuthorizeView>
+</div>
+
+@* Busqueda con un formulario GET normal: la pagina es de renderizado estatico (SSR), asi que el
+   texto viaja en la URL (?q=...) y el resultado se puede compartir o recargar sin perderse. *@
+<form method="get" action="abonados" class="row g-2 mb-3">
+    <div class="col-md-6">
+        <input type="search" name="q" class="form-control" value="@Texto"
+               placeholder="Buscar por nombre, identificacion o codigo (ej. CB-AB-000125)"
+               aria-label="Buscar abonados" />
+    </div>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-outline-primary">Buscar</button>
+        @if (!string.IsNullOrWhiteSpace(Texto))
+        {
+            <a class="btn btn-link" href="abonados">Limpiar</a>
+        }
+    </div>
+</form>
+
+@if (pagina is null)
+{
+    <p><em>Cargando...</em></p>
+}
+else if (pagina.Total == 0)
+{
+    <div class="alert alert-info">
+        @(string.IsNullOrWhiteSpace(Texto)
+            ? "Todavia no hay abonados registrados."
+            : "No se encontraron abonados con ese criterio.")
+    </div>
+}
+else
+{
+    <p class="text-muted">@pagina.Total abonado(s) encontrado(s).</p>
+
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead>
+                <tr>
+                    <th>Codigo</th>
+                    <th>Nombre</th>
+                    <th>Identificacion</th>
+                    <th>Telefono</th>
+                    <th class="text-end">Servicios</th>
+                    <th>Estado</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var a in pagina.Items)
+                {
+                    <tr>
+                        <td><a href="abonados/@a.Id">@a.Codigo</a></td>
+                        <td>@a.Nombre</td>
+                        <td>@Etiquetas.De(a.TipoIdentificacion): @a.Identificacion</td>
+                        <td>@a.Telefono</td>
+                        <td class="text-end">@a.CantidadServicios</td>
+                        <td><span class="badge @Etiquetas.ClaseEstado(a.Estado)">@Etiquetas.De(a.Estado)</span></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @if (pagina.TotalPaginas > 1)
+    {
+        <nav aria-label="Paginas de abonados">
+            <ul class="pagination">
+                <li class="page-item @(pagina.TieneAnterior ? "" : "disabled")">
+                    <a class="page-link" href="@Enlace(pagina.Pagina - 1)">Anterior</a>
+                </li>
+                <li class="page-item disabled">
+                    <span class="page-link">Pagina @pagina.Pagina de @pagina.TotalPaginas</span>
+                </li>
+                <li class="page-item @(pagina.TieneSiguiente ? "" : "disabled")">
+                    <a class="page-link" href="@Enlace(pagina.Pagina + 1)">Siguiente</a>
+                </li>
+            </ul>
+        </nav>
+    }
+}
+
+@code {
+    [Parameter, SupplyParameterFromQuery(Name = "q")]
+    public string? Texto { get; set; }
+
+    [Parameter, SupplyParameterFromQuery(Name = "pagina")]
+    public int? NumeroPagina { get; set; }
+
+    private PaginaResultado<AbonadoResumenDto>? pagina;
+
+    protected override async Task OnInitializedAsync()
+    {
+        pagina = await Buscar.EjecutarAsync(Texto, NumeroPagina ?? 1);
+    }
+
+    private string Enlace(int numeroPagina)
+    {
+        var q = string.IsNullOrWhiteSpace(Texto) ? "" : $"q={Uri.EscapeDataString(Texto)}&";
+        return $"abonados?{q}pagina={Math.Max(1, numeroPagina)}";
+    }
+}

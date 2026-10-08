@@ -17,13 +17,16 @@ namespace Asada.Infraestructura.Persistence;
 /// se aplica una sola vez, a nivel de modelo, y de ahi en adelante EF Core lo agrega
 /// automaticamente a cualquier consulta sobre Organizacion o Usuario -- ningun caso de uso
 /// futuro necesita acordarse de filtrar por organizacion_id manualmente (RB-015 del SRS).
-/// A partir de Sprint 1, cada entidad nueva que pertenezca a una organizacion (Abonado,
-/// Servicio, Tarifa...) debe sumarse a este mismo patron.
+/// Cada entidad nueva que pertenezca a una organizacion (Abonado, Propiedad y Servicio
+/// desde el Sprint 1; Tarifa, Recibo... despues) debe sumarse a este mismo patron.
 /// </summary>
 public class AsadaDbContext(DbContextOptions<AsadaDbContext> options, IProveedorOrganizacion proveedorOrganizacion)
     : IdentityDbContext<Usuario, Rol, int>(options)
 {
     public DbSet<Organizacion> Organizaciones => Set<Organizacion>();
+    public DbSet<Abonado> Abonados => Set<Abonado>();
+    public DbSet<Propiedad> Propiedades => Set<Propiedad>();
+    public DbSet<Servicio> Servicios => Set<Servicio>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -31,6 +34,9 @@ public class AsadaDbContext(DbContextOptions<AsadaDbContext> options, IProveedor
 
         builder.ApplyConfiguration(new OrganizacionConfiguracion());
         builder.ApplyConfiguration(new UsuarioConfiguracion());
+        builder.ApplyConfiguration(new AbonadoConfiguracion());
+        builder.ApplyConfiguration(new PropiedadConfiguracion());
+        builder.ApplyConfiguration(new ServicioConfiguracion());
 
         // Renombrar las tablas propias de Identity a nombres en espanol, consistentes con
         // el resto del esquema. Las columnas internas (email, password_hash, etc.) se dejan
@@ -46,6 +52,16 @@ public class AsadaDbContext(DbContextOptions<AsadaDbContext> options, IProveedor
         // Filtro global de aislamiento multiorganizacion.
         builder.Entity<Organizacion>().HasQueryFilter(o =>
             proveedorOrganizacion.EsSuperadministrador || o.Id == proveedorOrganizacion.OrganizacionId);
+
+        // Sprint 1: mismo filtro para cada entidad que pertenece a una organizacion. Se repite
+        // organizacion_id en Propiedad y Servicio a proposito, para que el filtro sea una sola
+        // comparacion de columna (sin joins) y ninguna consulta pueda saltarselo por accidente.
+        builder.Entity<Abonado>().HasQueryFilter(a =>
+            proveedorOrganizacion.EsSuperadministrador || a.OrganizacionId == proveedorOrganizacion.OrganizacionId);
+        builder.Entity<Propiedad>().HasQueryFilter(p =>
+            proveedorOrganizacion.EsSuperadministrador || p.OrganizacionId == proveedorOrganizacion.OrganizacionId);
+        builder.Entity<Servicio>().HasQueryFilter(s =>
+            proveedorOrganizacion.EsSuperadministrador || s.OrganizacionId == proveedorOrganizacion.OrganizacionId);
 
         // A proposito, Usuario NO lleva HasQueryFilter todavia, aunque tiene OrganizacionId:
         // UserManager/SignInManager consultan esta misma tabla para autenticar, y en ese

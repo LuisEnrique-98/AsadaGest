@@ -1,0 +1,310 @@
+﻿@page "/abonados/{AbonadoId:int}"
+@attribute [Authorize]
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Authorization
+
+@inject ObtenerExpedienteAbonadoCasoUso ObtenerExpediente
+@inject AgregarPropiedadCasoUso AgregarPropiedad
+@inject AgregarServicioCasoUso AgregarServicio
+@inject NavigationManager Navegacion
+
+<PageTitle>@(expediente?.Codigo ?? "Abonado")</PageTitle>
+
+<p><a href="abonados">&larr; Volver a abonados</a></p>
+
+@if (cargado && expediente is null)
+{
+    <div class="alert alert-warning">El abonado no existe o no pertenece a su ASADA.</div>
+    return;
+}
+
+@if (expediente is null)
+{
+    <p><em>Cargando...</em></p>
+    return;
+}
+
+@if (Ok == "abonado")
+{
+    <div class="alert alert-success">Abonado registrado. Ahora puede agregarle una propiedad y un servicio.</div>
+}
+else if (Ok == "propiedad")
+{
+    <div class="alert alert-success">Propiedad agregada.</div>
+}
+else if (Ok == "servicio")
+{
+    <div class="alert alert-success">Servicio agregado.</div>
+}
+
+<div class="d-flex align-items-center gap-3 mb-3">
+    <h1 class="mb-0">@expediente.Nombre</h1>
+    <span class="badge @Etiquetas.ClaseEstado(expediente.Estado)">@Etiquetas.De(expediente.Estado)</span>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <dl class="row mb-0">
+            <dt class="col-sm-3">Codigo</dt>
+            <dd class="col-sm-9">@expediente.Codigo</dd>
+
+            <dt class="col-sm-3">@Etiquetas.De(expediente.TipoIdentificacion)</dt>
+            <dd class="col-sm-9">@expediente.Identificacion</dd>
+
+            <dt class="col-sm-3">Telefono</dt>
+            <dd class="col-sm-9">@(expediente.Telefono ?? "—")</dd>
+
+            <dt class="col-sm-3">Correo</dt>
+            <dd class="col-sm-9">@(expediente.Correo ?? "—")</dd>
+
+            <dt class="col-sm-3">Direccion de contacto</dt>
+            <dd class="col-sm-9">@(expediente.Direccion ?? "—")</dd>
+
+            <dt class="col-sm-3">Registrado</dt>
+            <dd class="col-sm-9">@expediente.FechaCreacion.ToLocalTime().ToString("dd/MM/yyyy")</dd>
+        </dl>
+    </div>
+</div>
+
+<h2 class="h4">Propiedades y servicios</h2>
+
+@if (expediente.Propiedades.Count == 0)
+{
+    <div class="alert alert-info">Este abonado todavia no tiene propiedades registradas.</div>
+}
+
+@foreach (var propiedad in expediente.Propiedades)
+{
+    <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between">
+            <strong>@propiedad.Direccion</strong>
+            <span class="text-muted">
+                @(string.Join(", ", new[] { propiedad.Distrito, propiedad.Canton, propiedad.Provincia }
+                    .Where(x => !string.IsNullOrWhiteSpace(x))))
+            </span>
+        </div>
+        <div class="card-body">
+            @if (!string.IsNullOrWhiteSpace(propiedad.Referencia))
+            {
+                <p class="text-muted mb-2">Senas: @propiedad.Referencia</p>
+            }
+
+            @if (propiedad.Servicios.Count == 0)
+            {
+                <p class="mb-0"><em>Sin servicios.</em></p>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0">
+                        <thead>
+                            <tr>
+                                <th>Servicio</th>
+                                <th>Inicio</th>
+                                <th>Estado</th>
+                                <th>Morosidad</th>
+                                <th>Observaciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var servicio in propiedad.Servicios)
+                            {
+                                <tr>
+                                    <td>#@servicio.Id</td>
+                                    <td>@Etiquetas.Fecha(servicio.FechaInicio)</td>
+                                    <td><span class="badge @Etiquetas.ClaseEstado(servicio.Estado)">@Etiquetas.De(servicio.Estado)</span></td>
+                                    <td>
+                                        @if (servicio.EsMoroso)
+                                        {
+                                            <span class="badge bg-danger">Moroso</span>
+                                            <small>@servicio.MensualidadesPendientes mensualidad(es) · @Etiquetas.Colones(servicio.MontoPendiente)</small>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-success">Al dia</span>
+                                        }
+                                    </td>
+                                    <td>@servicio.Observaciones</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+<AuthorizeView Roles="Administrador,Operador" Context="autorizacion">
+    <div class="row mt-4">
+        <div class="col-lg-6 mb-4">
+            <h3 class="h5">Agregar propiedad</h3>
+            <EditForm Model="ModeloPropiedad" method="post" OnValidSubmit="GuardarPropiedadAsync" FormName="agregar-propiedad">
+                <DataAnnotationsValidator />
+
+                @if (erroresPropiedad.Count > 0)
+                {
+                    <div class="alert alert-danger" role="alert">
+                        <ul class="mb-0">@foreach (var e in erroresPropiedad) { <li>@e</li> }</ul>
+                    </div>
+                }
+
+                <div class="mb-3">
+                    <label for="p-direccion" class="form-label">Direccion</label>
+                    <InputText id="p-direccion" class="form-control" @bind-Value="ModeloPropiedad.Direccion" />
+                    <ValidationMessage For="() => ModeloPropiedad.Direccion" />
+                </div>
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label for="p-provincia" class="form-label">Provincia</label>
+                        <InputText id="p-provincia" class="form-control" @bind-Value="ModeloPropiedad.Provincia" />
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="p-canton" class="form-label">Canton</label>
+                        <InputText id="p-canton" class="form-control" @bind-Value="ModeloPropiedad.Canton" />
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="p-distrito" class="form-label">Distrito</label>
+                        <InputText id="p-distrito" class="form-control" @bind-Value="ModeloPropiedad.Distrito" />
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label for="p-referencia" class="form-label">Senas</label>
+                    <InputTextArea id="p-referencia" class="form-control" rows="2" @bind-Value="ModeloPropiedad.Referencia" />
+                </div>
+                <button type="submit" class="btn btn-outline-primary">Agregar propiedad</button>
+            </EditForm>
+        </div>
+
+        @if (expediente.Propiedades.Count > 0)
+        {
+            <div class="col-lg-6 mb-4">
+                <h3 class="h5">Agregar servicio</h3>
+                <EditForm Model="ModeloServicio" method="post" OnValidSubmit="GuardarServicioAsync" FormName="agregar-servicio">
+                    <DataAnnotationsValidator />
+
+                    @if (erroresServicio.Count > 0)
+                    {
+                        <div class="alert alert-danger" role="alert">
+                            <ul class="mb-0">@foreach (var e in erroresServicio) { <li>@e</li> }</ul>
+                        </div>
+                    }
+
+                    <div class="mb-3">
+                        <label for="s-propiedad" class="form-label">Propiedad</label>
+                        <InputSelect id="s-propiedad" class="form-select" @bind-Value="ModeloServicio.PropiedadId">
+                            <option value="0">Seleccione una propiedad...</option>
+                            @foreach (var p in expediente.Propiedades)
+                            {
+                                <option value="@p.Id">@p.Direccion</option>
+                            }
+                        </InputSelect>
+                    </div>
+                    <div class="mb-3">
+                        <label for="s-fecha" class="form-label">Fecha de inicio del servicio</label>
+                        <InputDate id="s-fecha" class="form-control" @bind-Value="ModeloServicio.FechaInicio" />
+                    </div>
+                    <div class="mb-3">
+                        <label for="s-obs" class="form-label">Observaciones</label>
+                        <InputText id="s-obs" class="form-control" @bind-Value="ModeloServicio.Observaciones" />
+                    </div>
+
+                    <fieldset class="border rounded p-3 mb-3">
+                        <legend class="float-none w-auto px-2 fs-6">Morosidad (carga manual, Etapa 1)</legend>
+                        <div class="form-check mb-2">
+                            <InputCheckbox id="s-moroso" class="form-check-input" @bind-Value="ModeloServicio.EsMoroso" />
+                            <label for="s-moroso" class="form-check-label">El servicio esta moroso</label>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label for="s-mens" class="form-label">Mensualidades pendientes</label>
+                                <InputNumber id="s-mens" class="form-control" @bind-Value="ModeloServicio.MensualidadesPendientes" />
+                            </div>
+                            <div class="col-md-6">
+                                <label for="s-monto" class="form-label">Monto pendiente (₡)</label>
+                                <InputNumber id="s-monto" class="form-control" @bind-Value="ModeloServicio.MontoPendiente" />
+                            </div>
+                        </div>
+                    </fieldset>
+
+                    <button type="submit" class="btn btn-outline-primary">Agregar servicio</button>
+                </EditForm>
+            </div>
+        }
+    </div>
+</AuthorizeView>
+
+@code {
+    [Parameter] public int AbonadoId { get; set; }
+
+    [Parameter, SupplyParameterFromQuery(Name = "ok")]
+    public string? Ok { get; set; }
+
+    private ExpedienteAbonadoDto? expediente;
+    private bool cargado;
+    private List<string> erroresPropiedad = [];
+    private List<string> erroresServicio = [];
+
+    [SupplyParameterFromForm(FormName = "agregar-propiedad")]
+    private ModeloNuevaPropiedad ModeloPropiedad { get; set; } = new();
+
+    [SupplyParameterFromForm(FormName = "agregar-servicio")]
+    private ModeloNuevoServicio ModeloServicio { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var resultado = await ObtenerExpediente.EjecutarAsync(AbonadoId);
+        expediente = resultado.Valor;
+        cargado = true;
+    }
+
+    private async Task GuardarPropiedadAsync()
+    {
+        var resultado = await AgregarPropiedad.EjecutarAsync(new AgregarPropiedadSolicitud(
+            AbonadoId, ModeloPropiedad.Direccion, ModeloPropiedad.Provincia,
+            ModeloPropiedad.Canton, ModeloPropiedad.Distrito, ModeloPropiedad.Referencia));
+
+        if (resultado.EsExitoso)
+        {
+            // Redirigir (patron Post-Redirect-Get) evita que recargar la pagina reenvie el formulario.
+            Navegacion.NavigateTo($"/abonados/{AbonadoId}?ok=propiedad", forceLoad: true);
+            return;
+        }
+        erroresPropiedad = resultado.Errores.ToList();
+    }
+
+    private async Task GuardarServicioAsync()
+    {
+        var resultado = await AgregarServicio.EjecutarAsync(new AgregarServicioSolicitud(
+            AbonadoId, ModeloServicio.PropiedadId, ModeloServicio.FechaInicio,
+            ModeloServicio.Observaciones, ModeloServicio.EsMoroso,
+            ModeloServicio.MensualidadesPendientes, ModeloServicio.MontoPendiente));
+
+        if (resultado.EsExitoso)
+        {
+            Navegacion.NavigateTo($"/abonados/{AbonadoId}?ok=servicio", forceLoad: true);
+            return;
+        }
+        erroresServicio = resultado.Errores.ToList();
+    }
+
+    private sealed class ModeloNuevaPropiedad
+    {
+        [Required(ErrorMessage = "Ingrese la direccion.")]
+        public string Direccion { get; set; } = "";
+        public string? Provincia { get; set; }
+        public string? Canton { get; set; }
+        public string? Distrito { get; set; }
+        public string? Referencia { get; set; }
+    }
+
+    private sealed class ModeloNuevoServicio
+    {
+        public int PropiedadId { get; set; }
+        public DateOnly FechaInicio { get; set; } = DateOnly.FromDateTime(DateTime.Today);
+        public string? Observaciones { get; set; }
+        public bool EsMoroso { get; set; }
+        public int MensualidadesPendientes { get; set; }
+        public decimal MontoPendiente { get; set; }
+    }
+}

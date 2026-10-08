@@ -121,6 +121,45 @@ tests/
   Asada.Dominio.Tests/      Pruebas unitarias de Organizacion (xUnit).
 ```
 
+## Sprint 1 -- Abonados
+
+Agrega el agregado **Abonado -> Propiedad -> Servicio**, con aislamiento por organizacion.
+
+- **Dominio:** `Abonado`, `Propiedad`, `Servicio`, `TipoIdentificacion` (cedula fisica, cedula juridica,
+  DIMEX, pasaporte), `EstadoRegistro`, `ReglasIdentificacion` (normaliza y valida el numero segun el tipo).
+  La morosidad vive en `Servicio` (correccion C-01), no en `Abonado`.
+- **Aplicacion:** `Resultado<T>`, `IRepositorioAbonados` y los casos de uso `CrearAbonado`,
+  `BuscarAbonados`, `ObtenerExpedienteAbonado`, `AgregarPropiedad`, `AgregarServicio`.
+- **Infraestructura:** configuraciones EF, `HasQueryFilter` para las 3 entidades nuevas, y
+  `RepositorioAbonados`. El correlativo (`CB-AB-000125`) sale de un contador por organizacion
+  (`organizaciones.ultimo_correlativo_abonado`) incrementado con `UPDATE ... RETURNING` dentro de
+  la misma transaccion que guarda el abonado.
+- **Presentacion:** `/abonados` (busqueda + paginacion), `/abonados/nuevo`, `/abonados/{id}`
+  (expediente con alta de propiedades y servicios) y `/cuenta/acceso-denegado`.
+
+Pasos para probarlo:
+
+```bash
+dotnet build
+dotnet test
+
+dotnet ef migrations add Sprint1Abonados \
+  --project src/Asada.Infraestructura \
+  --startup-project src/Asada.Presentacion
+
+dotnet run --project src/Asada.Presentacion   # en Desarrollo aplica la migracion sola
+```
+
+Decisiones a tener presentes:
+
+1. Las paginas son de **renderizado estatico (SSR)**, igual que el login: `ProveedorOrganizacion`
+   lee `HttpContext`, que no esta disponible dentro de un circuito interactivo de Blazor Server.
+   Si en el futuro se agrega `@rendermode InteractiveServer` a alguna pagina, hay que cambiar el
+   proveedor para que lea `AuthenticationStateProvider`.
+2. Solo `Administrador` y `Operador` pueden crear/agregar; `Consulta` solo ve. La matriz formal es Sprint 5.
+3. Identificacion unica por organizacion (`organizacion_id` + tipo + numero), guardada sin guiones.
+4. La validacion es manual (sin FluentValidation) para que `Asada.Aplicacion` siga sin dependencias.
+
 ## Siguiente paso
 
 Una vez que confirmes que `dotnet build` compila limpio en tu maquina (y me cuentes que

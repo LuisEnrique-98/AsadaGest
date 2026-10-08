@@ -1,6 +1,8 @@
+using Asada.Aplicacion.Abonados;
 using Asada.Aplicacion.Common;
 using Asada.Infraestructura.Identidad;
 using Asada.Infraestructura.Persistence;
+using Asada.Infraestructura.Persistence.Repositorios;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -30,6 +32,7 @@ public static class InfraestructuraServiceCollectionExtensions
 
         servicios.AddHttpContextAccessor();
         servicios.AddScoped<IProveedorOrganizacion, ProveedorOrganizacion>();
+        servicios.AddScoped<IRepositorioAbonados, RepositorioAbonados>();
 
         servicios
             .AddIdentity<Usuario, Rol>(opciones =>

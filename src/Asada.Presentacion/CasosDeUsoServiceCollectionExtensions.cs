@@ -1,0 +1,21 @@
+using Asada.Aplicacion.Abonados;
+
+namespace Asada.Presentacion;
+
+/// <summary>
+/// Registro de los casos de uso de Asada.Aplicacion. Asada.Aplicacion no referencia ningun
+/// paquete de inyeccion de dependencias a proposito (se mantiene sin dependencias externas),
+/// asi que el registro vive aqui, donde ya existe el contenedor de servicios.
+/// </summary>
+public static class CasosDeUsoServiceCollectionExtensions
+{
+    public static IServiceCollection AgregarCasosDeUso(this IServiceCollection servicios)
+    {
+        servicios.AddScoped<CrearAbonadoCasoUso>();
+        servicios.AddScoped<BuscarAbonadosCasoUso>();
+        servicios.AddScoped<ObtenerExpedienteAbonadoCasoUso>();
+        servicios.AddScoped<AgregarPropiedadCasoUso>();
+        servicios.AddScoped<AgregarServicioCasoUso>();
+        return servicios;
+    }
+}
