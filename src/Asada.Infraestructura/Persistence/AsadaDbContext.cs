@@ -27,6 +27,10 @@ public class AsadaDbContext(DbContextOptions<AsadaDbContext> options, IProveedor
     public DbSet<Abonado> Abonados => Set<Abonado>();
     public DbSet<Propiedad> Propiedades => Set<Propiedad>();
     public DbSet<Servicio> Servicios => Set<Servicio>();
+    public DbSet<Medidor> Medidores => Set<Medidor>();
+    public DbSet<Periodo> Periodos => Set<Periodo>();
+    public DbSet<Medicion> Mediciones => Set<Medicion>();
+    public DbSet<SeguimientoLectura> SeguimientosLectura => Set<SeguimientoLectura>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -37,6 +41,10 @@ public class AsadaDbContext(DbContextOptions<AsadaDbContext> options, IProveedor
         builder.ApplyConfiguration(new AbonadoConfiguracion());
         builder.ApplyConfiguration(new PropiedadConfiguracion());
         builder.ApplyConfiguration(new ServicioConfiguracion());
+        builder.ApplyConfiguration(new MedidorConfiguracion());
+        builder.ApplyConfiguration(new PeriodoConfiguracion());
+        builder.ApplyConfiguration(new MedicionConfiguracion());
+        builder.ApplyConfiguration(new SeguimientoLecturaConfiguracion());
 
         // Renombrar las tablas propias de Identity a nombres en espanol, consistentes con
         // el resto del esquema. Las columnas internas (email, password_hash, etc.) se dejan
@@ -61,6 +69,16 @@ public class AsadaDbContext(DbContextOptions<AsadaDbContext> options, IProveedor
         builder.Entity<Propiedad>().HasQueryFilter(p =>
             proveedorOrganizacion.EsSuperadministrador || p.OrganizacionId == proveedorOrganizacion.OrganizacionId);
         builder.Entity<Servicio>().HasQueryFilter(s =>
+            proveedorOrganizacion.EsSuperadministrador || s.OrganizacionId == proveedorOrganizacion.OrganizacionId);
+
+        // Sprint 2: medidores, periodos, lecturas y seguimientos, con el mismo patron.
+        builder.Entity<Medidor>().HasQueryFilter(m =>
+            proveedorOrganizacion.EsSuperadministrador || m.OrganizacionId == proveedorOrganizacion.OrganizacionId);
+        builder.Entity<Periodo>().HasQueryFilter(p =>
+            proveedorOrganizacion.EsSuperadministrador || p.OrganizacionId == proveedorOrganizacion.OrganizacionId);
+        builder.Entity<Medicion>().HasQueryFilter(m =>
+            proveedorOrganizacion.EsSuperadministrador || m.OrganizacionId == proveedorOrganizacion.OrganizacionId);
+        builder.Entity<SeguimientoLectura>().HasQueryFilter(s =>
             proveedorOrganizacion.EsSuperadministrador || s.OrganizacionId == proveedorOrganizacion.OrganizacionId);
 
         // A proposito, Usuario NO lleva HasQueryFilter todavia, aunque tiene OrganizacionId:

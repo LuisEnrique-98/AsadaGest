@@ -160,6 +160,41 @@ Decisiones a tener presentes:
 3. Identificacion unica por organizacion (`organizacion_id` + tipo + numero), guardada sin guiones.
 4. La validacion es manual (sin FluentValidation) para que `Asada.Aplicacion` siga sin dependencias.
 
+## Sprint 1b -- Edicion de abonados
+
+`/abonados/{id}/editar` (Administrador y Operador) corrige los datos del abonado; el codigo no cambia.
+El boton Desactivar/Reactivar del expediente (solo Administrador) cambia el estado sin borrar nada.
+La identificacion sigue siendo unica por ASADA y el propio abonado no cuenta como duplicado de si mismo.
+
+## Sprint 2 -- Mediciones
+
+- **Medidores** (`/servicios/{id}/medidores`): instalar, retirar y ver el historial. Un servicio tiene a lo sumo
+  un medidor activo (tambien garantizado por un indice unico filtrado en PostgreSQL). Cambiar un medidor =
+  retirar el actual (con su lectura final) e instalar el nuevo.
+- **Periodo de lectura:** la ultima semana de cada mes (`ReglasPeriodo`). Es una regla fija por ahora.
+- **Lecturas** (`/lecturas`): estado de un periodo, con los servicios con y sin lectura. Con la ventana ya
+  cerrada, cada servicio sin lectura genera una alerta; el operador la anota (`/lecturas/seguimiento/{id}`)
+  eligiendo "Leer lo antes posible" o "Esperar al mes siguiente".
+- **Registro de lectura** (`/lecturas/registrar/{id}`): calcula el consumo con `CalculadoraConsumo`.
+  RB-013: si hubo cambio de medidor entre dos lecturas se suman los tramos de cada medidor.
+- **Revision manual:** una lectura nunca se rechaza por "rara"; se guarda y queda marcada si (a) la fecha cae fuera
+  de la ventana, (b) el periodo anterior quedo sin lectura (RB-014: el consumo NO se reparte entre meses), o
+  (c) el consumo supera en mas de 50 % el promedio de los ultimos 3.
+- Solo Administrador y Operador registran; Consulta solo ve. La fecha de "hoy" es la de Costa Rica (UTC-6).
+
+Pasos:
+
+```bash
+dotnet build
+dotnet test
+dotnet ef migrations add Sprint2Mediciones \
+  --project src/Asada.Infraestructura \
+  --startup-project src/Asada.Presentacion
+dotnet run --project src/Asada.Presentacion
+```
+
+Recuerde: los formularios `EditForm` NO llevan `<AntiforgeryToken />` (ya lo incluyen).
+
 ## Siguiente paso
 
 Una vez que confirmes que `dotnet build` compila limpio en tu maquina (y me cuentes que

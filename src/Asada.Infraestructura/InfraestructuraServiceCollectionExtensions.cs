@@ -1,5 +1,6 @@
 using Asada.Aplicacion.Abonados;
 using Asada.Aplicacion.Common;
+using Asada.Aplicacion.Mediciones;
 using Asada.Infraestructura.Identidad;
 using Asada.Infraestructura.Persistence;
 using Asada.Infraestructura.Persistence.Repositorios;
@@ -33,6 +34,8 @@ public static class InfraestructuraServiceCollectionExtensions
         servicios.AddHttpContextAccessor();
         servicios.AddScoped<IProveedorOrganizacion, ProveedorOrganizacion>();
         servicios.AddScoped<IRepositorioAbonados, RepositorioAbonados>();
+        servicios.AddScoped<IRepositorioMediciones, RepositorioMediciones>();
+        servicios.AddSingleton<IProveedorFecha, ProveedorFecha>();
 
         servicios
             .AddIdentity<Usuario, Rol>(opciones =>

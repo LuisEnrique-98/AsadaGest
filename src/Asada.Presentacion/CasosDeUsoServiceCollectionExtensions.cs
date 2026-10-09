@@ -1,4 +1,5 @@
 using Asada.Aplicacion.Abonados;
+using Asada.Aplicacion.Mediciones;
 
 namespace Asada.Presentacion;
 
@@ -18,6 +19,14 @@ public static class CasosDeUsoServiceCollectionExtensions
         servicios.AddScoped<AgregarServicioCasoUso>();
         servicios.AddScoped<ActualizarAbonadoCasoUso>();
         servicios.AddScoped<CambiarEstadoAbonadoCasoUso>();
+
+        // Sprint 2: medidores y lecturas.
+        servicios.AddScoped<InstalarMedidorCasoUso>();
+        servicios.AddScoped<RetirarMedidorCasoUso>();
+        servicios.AddScoped<ObtenerMedidoresServicioCasoUso>();
+        servicios.AddScoped<RegistrarLecturaCasoUso>();
+        servicios.AddScoped<ObtenerLecturasPeriodoCasoUso>();
+        servicios.AddScoped<RegistrarSeguimientoLecturaCasoUso>();
         return servicios;
     }
 }

@@ -125,6 +125,7 @@ else if (Ok == "servicio")
                                 <th>Estado</th>
                                 <th>Morosidad</th>
                                 <th>Observaciones</th>
+                                <th></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -146,6 +147,7 @@ else if (Ok == "servicio")
                                         }
                                     </td>
                                     <td>@servicio.Observaciones</td>
+                                    <td><a class="btn btn-sm btn-outline-primary" href="servicios/@(servicio.Id)/medidores">Medidores</a></td>
                                 </tr>
                             }
                         </tbody>

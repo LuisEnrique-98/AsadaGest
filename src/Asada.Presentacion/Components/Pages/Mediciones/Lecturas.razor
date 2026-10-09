@@ -1,0 +1,208 @@
+@page "/lecturas"
+@attribute [Authorize]
+@using Microsoft.AspNetCore.Authorization
+@using Asada.Aplicacion.Common
+
+@inject ObtenerLecturasPeriodoCasoUso ObtenerLecturas
+@inject IProveedorFecha Fecha
+
+<PageTitle>Lecturas del periodo</PageTitle>
+
+<h1>Lecturas del periodo</h1>
+
+@if (Ok == "lectura")
+{
+    <div class="alert alert-success">Lectura registrada.</div>
+    @if (Revision == "1")
+    {
+        <div class="alert alert-warning">La lectura quedo marcada para revision. Los motivos aparecen en la fila del servicio.</div>
+    }
+}
+else if (Ok == "seguimiento")
+{
+    <div class="alert alert-success">Anotacion guardada.</div>
+}
+
+@* Seleccion del periodo con un formulario GET: la pagina es SSR, el periodo viaja en la URL. *@
+<form method="get" action="lecturas" class="row g-2 align-items-end mb-3">
+    <div class="col-auto">
+        <label for="mes" class="form-label">Mes</label>
+        <select id="mes" name="mes" class="form-select">
+            @for (var m = 1; m <= 12; m++)
+            {
+                <option value="@m" selected="@(m == mesActual)">@Etiquetas.Mes(m)</option>
+            }
+        </select>
+    </div>
+    <div class="col-auto">
+        <label for="anio" class="form-label">Anio</label>
+        <input id="anio" name="anio" type="number" min="2000" max="2100" class="form-control" value="@anioActual" />
+    </div>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-outline-primary">Ver periodo</button>
+    </div>
+    <div class="col-auto">
+        <a class="btn btn-link" href="@EnlacePeriodo(anterior)">&larr; @Etiquetas.Periodo(anterior.Anio, anterior.Mes)</a>
+        <a class="btn btn-link" href="@EnlacePeriodo(siguiente)">@Etiquetas.Periodo(siguiente.Anio, siguiente.Mes) &rarr;</a>
+    </div>
+</form>
+
+@if (error is not null)
+{
+    <div class="alert alert-danger">@error</div>
+    return;
+}
+
+@if (datos is null)
+{
+    <p><em>Cargando...</em></p>
+    return;
+}
+
+<div class="card mb-3">
+    <div class="card-body">
+        <h2 class="h5 mb-2">
+            Periodo de @Etiquetas.Periodo(datos.Anio, datos.Mes)
+            <span class="badge @Etiquetas.ClaseVentana(datos.EstadoVentana) ms-2">Ventana @Etiquetas.De(datos.EstadoVentana).ToLower()</span>
+        </h2>
+        <p class="mb-1">
+            Toma de lecturas: del <strong>@Etiquetas.Fecha(datos.InicioVentana)</strong>
+            al <strong>@Etiquetas.Fecha(datos.FinVentana)</strong> (ultima semana del mes).
+        </p>
+        <p class="mb-0 text-muted">
+            @datos.Total servicio(s) &middot; @datos.ConLectura con lectura &middot; @datos.SinLectura sin lectura
+            &middot; @datos.ParaRevision para revision
+        </p>
+    </div>
+</div>
+
+@if (datos.HayAlerta)
+{
+    <div class="alert alert-danger" role="alert">
+        <strong>@datos.SinLectura servicio(s) sin lectura</strong> en @Etiquetas.Periodo(datos.Anio, datos.Mes):
+        la ventana de lectura ya cerro. Para cada uno, anote si se leera lo antes posible o si se esperara al mes siguiente.
+    </div>
+}
+
+@if (datos.Total == 0)
+{
+    <div class="alert alert-info">No hay servicios activos para este periodo.</div>
+    return;
+}
+
+<div class="table-responsive">
+    <table class="table table-hover align-middle">
+        <thead>
+            <tr>
+                <th>Abonado</th>
+                <th>Propiedad</th>
+                <th>Medidor</th>
+                <th class="text-end">Lectura</th>
+                <th class="text-end">Consumo</th>
+                <th>Estado</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var f in datos.Filas)
+            {
+                <tr class="@(!f.TieneLectura && datos.EstadoVentana == EstadoVentanaLectura.Cerrada ? "table-danger" : "")">
+                    <td>
+                        <a href="abonados/@f.AbonadoId">@f.AbonadoCodigo</a><br />
+                        <small>@f.AbonadoNombre</small>
+                    </td>
+                    <td>@f.PropiedadDireccion</td>
+                    <td>
+                        @if (f.TieneMedidor)
+                        {
+                            @f.NumeroSerieMedidor
+                        }
+                        else
+                        {
+                            <a href="servicios/@(f.ServicioId)/medidores"><span class="badge bg-warning text-dark">Sin medidor</span></a>
+                        }
+                    </td>
+                    @if (f.TieneLectura)
+                    {
+                        <td class="text-end">@Etiquetas.Metros(f.Lectura!.Value)<br /><small class="text-muted">@Etiquetas.Fecha(f.FechaLectura!.Value)</small></td>
+                        <td class="text-end">@Etiquetas.Metros(f.Consumo!.Value)</td>
+                        <td>
+                            @if (f.RequiereRevision)
+                            {
+                                <span class="badge bg-warning text-dark">Revisar</span>
+                                <br />
+                                <small>@f.MotivosRevision</small>
+                            }
+                            else
+                            {
+                                <span class="badge bg-success">Registrada</span>
+                            }
+                        </td>
+                        <td></td>
+                    }
+                    else
+                    {
+                        <td class="text-end">&mdash;</td>
+                        <td class="text-end">&mdash;</td>
+                        <td>
+                            @if (f.Decision is not null)
+                            {
+                                <span class="badge bg-info text-dark">@Etiquetas.De(f.Decision.Value)</span>
+                                @if (!string.IsNullOrWhiteSpace(f.NotaSeguimiento))
+                                {
+                                    <br />
+                                    <small>@f.NotaSeguimiento</small>
+                                }
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">Pendiente</span>
+                            }
+                        </td>
+                        <td class="text-nowrap">
+                            <AuthorizeView Roles="Administrador,Operador" Context="permiso">
+                                @if (f.TieneMedidor)
+                                {
+                                    <a class="btn btn-sm btn-primary" href="lecturas/registrar/@(f.ServicioId)?anio=@(datos.Anio)&mes=@(datos.Mes)">Registrar lectura</a>
+                                }
+                                <a class="btn btn-sm btn-outline-secondary" href="lecturas/seguimiento/@(f.ServicioId)?anio=@(datos.Anio)&mes=@(datos.Mes)">Anotar</a>
+                            </AuthorizeView>
+                        </td>
+                    }
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    [Parameter, SupplyParameterFromQuery(Name = "anio")] public int? Anio { get; set; }
+    [Parameter, SupplyParameterFromQuery(Name = "mes")] public int? Mes { get; set; }
+    [Parameter, SupplyParameterFromQuery(Name = "ok")] public string? Ok { get; set; }
+    [Parameter, SupplyParameterFromQuery(Name = "revision")] public string? Revision { get; set; }
+
+    private LecturasPeriodoDto? datos;
+    private string? error;
+    private int anioActual;
+    private int mesActual;
+    private (int Anio, int Mes) anterior;
+    private (int Anio, int Mes) siguiente;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var periodo = Anio is int a && Mes is int m && ReglasPeriodo.EsMesValido(a, m)
+            ? (Anio: a, Mes: m)
+            : ReglasPeriodo.PeriodoPorDefecto(Fecha.Hoy);
+
+        anioActual = periodo.Anio;
+        mesActual = periodo.Mes;
+        anterior = ReglasPeriodo.Anterior(anioActual, mesActual);
+        siguiente = ReglasPeriodo.Siguiente(anioActual, mesActual);
+
+        var resultado = await ObtenerLecturas.EjecutarAsync(anioActual, mesActual);
+        if (resultado.EsExitoso) datos = resultado.Valor;
+        else error = string.Join(" ", resultado.Errores);
+    }
+
+    private static string EnlacePeriodo((int Anio, int Mes) p) => $"lecturas?anio={p.Anio}&mes={p.Mes}";
+}
