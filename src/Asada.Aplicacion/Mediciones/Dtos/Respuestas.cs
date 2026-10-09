@@ -45,6 +45,7 @@ public sealed record FilaLecturaPeriodoDto(
     decimal? Consumo,
     bool RequiereRevision,
     string? MotivosRevision,
+    string? ObservacionesLectura,
     // Anotacion del operador (null si no hay):
     DecisionSeguimientoLectura? Decision,
     string? NotaSeguimiento)

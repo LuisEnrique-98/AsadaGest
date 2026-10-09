@@ -435,3 +435,22 @@ public class SeguimientoLecturaCasoUsoTests
         Assert.False((await sinOrg.EjecutarAsync(Solicitud(e.Servicio.Id, DecisionSeguimientoLectura.LeerLoAntesPosible))).EsExitoso);
     }
 }
+
+public class ObservacionesDeLecturaTests
+{
+    [Fact]
+    public async Task LaObservacionDeLaLectura_SeMuestraEnElListadoDelPeriodo_SeparadaDeLosMotivos()
+    {
+        var e = new Escenario();
+        await e.InstalarMedidorAsync();
+        // Fecha fuera de la ventana de septiembre: queda en revision, y ademas lleva una observacion.
+        await e.Lectura.EjecutarAsync(new RegistrarLecturaSolicitud(
+            e.Servicio.Id, 2026, 9, new DateOnly(2026, 10, 3), 40m, "Medidor dentro de la propiedad"));
+
+        var fila = (await e.LecturasPeriodo.EjecutarAsync(2026, 9)).Valor!.Filas[0];
+
+        Assert.True(fila.RequiereRevision);
+        Assert.Contains("fuera de la ventana", fila.MotivosRevision);
+        Assert.Equal("Medidor dentro de la propiedad", fila.ObservacionesLectura);
+    }
+}

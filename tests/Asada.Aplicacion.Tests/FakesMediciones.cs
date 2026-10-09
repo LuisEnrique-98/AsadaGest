@@ -117,7 +117,7 @@ public sealed class RepositorioMedicionesEnMemoria : IRepositorioMediciones
             return new FilaLecturaPeriodoDto(
                 s.Id, ab.Id, ab.Codigo, ab.Nombre, s.Propiedad.Direccion, activo?.NumeroSerie,
                 lectura.M?.FechaLectura, lectura.M?.Lectura, lectura.M?.Consumo,
-                lectura.M?.RequiereRevision ?? false, lectura.M?.MotivosRevision,
+                lectura.M?.RequiereRevision ?? false, lectura.M?.MotivosRevision, lectura.M?.Observaciones,
                 seg?.Decision, seg?.Nota);
         }).ToList();
         return Task.FromResult<IReadOnlyList<FilaLecturaPeriodoDto>>(filas);

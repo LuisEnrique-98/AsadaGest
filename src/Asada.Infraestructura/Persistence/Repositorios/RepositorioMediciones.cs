@@ -132,7 +132,7 @@ public class RepositorioMediciones(AsadaDbContext db, IProveedorOrganizacion pro
             from m in db.Mediciones
             join p in db.Periodos on m.PeriodoId equals p.Id
             where ids.Contains(m.ServicioId) && p.Anio == anio && p.Mes == mes
-            select new { m.ServicioId, m.FechaLectura, m.Lectura, m.Consumo, m.RequiereRevision, m.MotivosRevision })
+            select new { m.ServicioId, m.FechaLectura, m.Lectura, m.Consumo, m.RequiereRevision, m.MotivosRevision, m.Observaciones })
             .ToListAsync(ct);
 
         var seguimientos = await (
@@ -152,7 +152,7 @@ public class RepositorioMediciones(AsadaDbContext db, IProveedorOrganizacion pro
                 s.ServicioId, s.AbonadoId, s.Codigo, s.Nombre, s.Direccion,
                 medidor?.NumeroSerie,
                 lectura?.FechaLectura, lectura?.Lectura, lectura?.Consumo,
-                lectura?.RequiereRevision ?? false, lectura?.MotivosRevision,
+                lectura?.RequiereRevision ?? false, lectura?.MotivosRevision, lectura?.Observaciones,
                 seguimiento?.Decision, seguimiento?.Nota);
         }).ToList();
     }

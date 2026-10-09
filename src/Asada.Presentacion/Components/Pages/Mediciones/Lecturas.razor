@@ -137,6 +137,11 @@ else if (Ok == "seguimiento")
                             {
                                 <span class="badge bg-success">Registrada</span>
                             }
+                            @if (!string.IsNullOrWhiteSpace(f.ObservacionesLectura))
+                            {
+                                <br />
+                                <small class="text-muted">Observacion: @f.ObservacionesLectura</small>
+                            }
                         </td>
                         <td></td>
                     }
