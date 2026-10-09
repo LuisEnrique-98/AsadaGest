@@ -204,3 +204,111 @@ public class BuscarYExpedienteCasosUsoTests
         Assert.False(resultado.EsExitoso);
     }
 }
+
+public class EdicionDeAbonadosCasosUsoTests
+{
+    private static async Task<(RepositorioAbonadosEnMemoria repo, int id1, int id2)> DosAbonadosAsync()
+    {
+        var repo = new RepositorioAbonadosEnMemoria();
+        var crear = new CrearAbonadoCasoUso(repo, new ProveedorOrganizacionFalso(1));
+        var a = await crear.EjecutarAsync(new CrearAbonadoSolicitud(TipoIdentificacion.CedulaFisica, "102340567", "Maria Rojas", null, null, null));
+        var b = await crear.EjecutarAsync(new CrearAbonadoSolicitud(TipoIdentificacion.CedulaFisica, "203450678", "Juan Perez", null, null, null));
+        return (repo, a.Valor, b.Valor);
+    }
+
+    private static ActualizarAbonadoSolicitud Edicion(int id, string identificacion = "1-0234-0567", string nombre = " Maria Rojas Mora ")
+        => new(id, TipoIdentificacion.CedulaFisica, identificacion, nombre, "8888-0000", "maria@correo.cr", " Centro ");
+
+    [Fact]
+    public async Task Actualizar_CambiaLosDatosYConservaElCodigo()
+    {
+        var (repo, id1, _) = await DosAbonadosAsync();
+
+        var resultado = await new ActualizarAbonadoCasoUso(repo).EjecutarAsync(Edicion(id1));
+
+        Assert.True(resultado.EsExitoso);
+        var a = repo.Abonados[0];
+        Assert.Equal("Maria Rojas Mora", a.Nombre);
+        Assert.Equal("Centro", a.Direccion);
+        Assert.Equal("CB-AB-000001", a.Codigo);
+        Assert.Equal(1, repo.Guardados);
+    }
+
+    [Fact]
+    public async Task Actualizar_ConsuPropiaIdentificacion_NoEsDuplicado()
+    {
+        var (repo, id1, _) = await DosAbonadosAsync();
+
+        var resultado = await new ActualizarAbonadoCasoUso(repo).EjecutarAsync(Edicion(id1, "102340567"));
+
+        Assert.True(resultado.EsExitoso);
+    }
+
+    [Fact]
+    public async Task Actualizar_ConLaIdentificacionDeOtroAbonado_Falla()
+    {
+        var (repo, id1, _) = await DosAbonadosAsync();
+
+        var resultado = await new ActualizarAbonadoCasoUso(repo).EjecutarAsync(Edicion(id1, "2-0345-0678"));
+
+        Assert.False(resultado.EsExitoso);
+        Assert.Contains(resultado.Errores, e => e.Contains("otro abonado"));
+        Assert.Equal("102340567", repo.Abonados[0].Identificacion);
+        Assert.Equal(0, repo.Guardados);
+    }
+
+    [Fact]
+    public async Task Actualizar_ConDatosInvalidos_NoGuarda()
+    {
+        var (repo, id1, _) = await DosAbonadosAsync();
+
+        var resultado = await new ActualizarAbonadoCasoUso(repo).EjecutarAsync(Edicion(id1, "123", "  "));
+
+        Assert.False(resultado.EsExitoso);
+        Assert.Equal(2, resultado.Errores.Count);
+        Assert.Equal(0, repo.Guardados);
+    }
+
+    [Fact]
+    public async Task Actualizar_AbonadoInexistente_Falla()
+    {
+        var (repo, _, _) = await DosAbonadosAsync();
+        var resultado = await new ActualizarAbonadoCasoUso(repo).EjecutarAsync(Edicion(999));
+        Assert.False(resultado.EsExitoso);
+    }
+
+    [Fact]
+    public async Task CambiarEstado_DesactivaYReactiva_SinPerderDatos()
+    {
+        var (repo, id1, _) = await DosAbonadosAsync();
+        var casoUso = new CambiarEstadoAbonadoCasoUso(repo);
+
+        Assert.True((await casoUso.EjecutarAsync(new CambiarEstadoAbonadoSolicitud(id1, EstadoRegistro.Inactivo))).EsExitoso);
+        Assert.Equal(EstadoRegistro.Inactivo, repo.Abonados[0].Estado);
+        Assert.Single(repo.Abonados.Where(a => a.Id == id1));
+
+        Assert.True((await casoUso.EjecutarAsync(new CambiarEstadoAbonadoSolicitud(id1, EstadoRegistro.Activo))).EsExitoso);
+        Assert.Equal(EstadoRegistro.Activo, repo.Abonados[0].Estado);
+        Assert.Equal(2, repo.Guardados);
+    }
+
+    [Fact]
+    public async Task CambiarEstado_AlMismoEstado_NoGuardaNada()
+    {
+        var (repo, id1, _) = await DosAbonadosAsync();
+
+        await new CambiarEstadoAbonadoCasoUso(repo).EjecutarAsync(new CambiarEstadoAbonadoSolicitud(id1, EstadoRegistro.Activo));
+
+        Assert.Equal(0, repo.Guardados);
+    }
+
+    [Fact]
+    public async Task CambiarEstado_ConValorInvalidoOAbonadoInexistente_Falla()
+    {
+        var (repo, id1, _) = await DosAbonadosAsync();
+        var casoUso = new CambiarEstadoAbonadoCasoUso(repo);
+
+        Assert.False((await casoUso.EjecutarAsync(new CambiarEstadoAbonadoSolicitud(id1, (EstadoRegistro)99))).EsExitoso);
+        Assert.False((await casoUso.EjecutarAsync(new CambiarEstadoAbonadoSolicitud(999, EstadoRegistro.Inactivo))).EsExitoso);
+    }
+}

@@ -38,6 +38,22 @@ public class Abonado
     public static string GenerarCodigo(string codigoOrganizacion, int correlativo)
         => $"{codigoOrganizacion}-AB-{correlativo:D6}";
 
+    /// <summary>Actualiza los datos editables. El codigo y el correlativo nunca cambian.</summary>
+    public void ActualizarDatos(
+        TipoIdentificacion tipo, string identificacionNormalizada, string nombre,
+        string? telefono, string? correo, string? direccion)
+    {
+        TipoIdentificacion = tipo;
+        Identificacion = identificacionNormalizada;
+        Nombre = nombre;
+        Telefono = telefono;
+        Correo = correo;
+        Direccion = direccion;
+    }
+
+    /// <summary>Un abonado inactivo se conserva con todo su historial; no se elimina.</summary>
+    public void CambiarEstado(EstadoRegistro estado) => Estado = estado;
+
     public Propiedad AgregarPropiedad(
         string direccion, string? provincia = null, string? canton = null,
         string? distrito = null, string? referencia = null)

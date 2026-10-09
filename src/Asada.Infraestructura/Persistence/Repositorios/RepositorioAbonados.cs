@@ -12,9 +12,11 @@ namespace Asada.Infraestructura.Persistence.Repositorios;
 public class RepositorioAbonados(AsadaDbContext db) : IRepositorioAbonados
 {
     public Task<bool> ExisteIdentificacionAsync(
-        TipoIdentificacion tipo, string identificacionNormalizada, CancellationToken ct = default)
+        TipoIdentificacion tipo, string identificacionNormalizada, int? excluirAbonadoId = null, CancellationToken ct = default)
         => db.Abonados.AnyAsync(
-            a => a.TipoIdentificacion == tipo && a.Identificacion == identificacionNormalizada, ct);
+            a => a.TipoIdentificacion == tipo
+                 && a.Identificacion == identificacionNormalizada
+                 && (excluirAbonadoId == null || a.Id != excluirAbonadoId), ct);
 
     public async Task AgregarAsync(Abonado abonado, CancellationToken ct = default)
     {

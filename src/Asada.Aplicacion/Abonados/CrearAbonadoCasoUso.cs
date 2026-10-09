@@ -31,7 +31,7 @@ public class CrearAbonadoCasoUso(IRepositorioAbonados repositorio, IProveedorOrg
 
         if (errores.Count > 0) return Resultado<int>.Falla(errores);
 
-        if (await repositorio.ExisteIdentificacionAsync(s.TipoIdentificacion, identificacion, ct))
+        if (await repositorio.ExisteIdentificacionAsync(s.TipoIdentificacion, identificacion, ct: ct))
             return Resultado<int>.Falla("Ya existe un abonado registrado con esa identificacion.");
 
         var abonado = new Abonado

@@ -26,3 +26,14 @@ public sealed record AgregarServicioSolicitud(
     bool EsMoroso,
     int MensualidadesPendientes,
     decimal MontoPendiente);
+
+public sealed record ActualizarAbonadoSolicitud(
+    int AbonadoId,
+    TipoIdentificacion TipoIdentificacion,
+    string Identificacion,
+    string Nombre,
+    string? Telefono,
+    string? Correo,
+    string? Direccion);
+
+public sealed record CambiarEstadoAbonadoSolicitud(int AbonadoId, EstadoRegistro Estado);

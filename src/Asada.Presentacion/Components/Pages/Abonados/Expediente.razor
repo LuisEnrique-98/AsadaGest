@@ -6,6 +6,7 @@
 @inject ObtenerExpedienteAbonadoCasoUso ObtenerExpediente
 @inject AgregarPropiedadCasoUso AgregarPropiedad
 @inject AgregarServicioCasoUso AgregarServicio
+@inject CambiarEstadoAbonadoCasoUso CambiarEstado
 @inject NavigationManager Navegacion
 
 <PageTitle>@(expediente?.Codigo ?? "Abonado")</PageTitle>
@@ -28,6 +29,14 @@
 {
     <div class="alert alert-success">Abonado registrado. Ahora puede agregarle una propiedad y un servicio.</div>
 }
+else if (Ok == "editado")
+{
+    <div class="alert alert-success">Datos del abonado actualizados.</div>
+}
+else if (Ok == "estado")
+{
+    <div class="alert alert-success">Estado del abonado actualizado.</div>
+}
 else if (Ok == "propiedad")
 {
     <div class="alert alert-success">Propiedad agregada.</div>
@@ -40,6 +49,18 @@ else if (Ok == "servicio")
 <div class="d-flex align-items-center gap-3 mb-3">
     <h1 class="mb-0">@expediente.Nombre</h1>
     <span class="badge @Etiquetas.ClaseEstado(expediente.Estado)">@Etiquetas.De(expediente.Estado)</span>
+    <AuthorizeView Roles="Administrador,Operador" Context="permisoEdicion">
+        <a class="btn btn-sm btn-outline-secondary ms-auto" href="abonados/@expediente.Id/editar">Editar datos</a>
+    </AuthorizeView>
+    <AuthorizeView Roles="Administrador" Context="permisoEstado">
+        @* Formulario HTML normal (no EditForm): necesita su propio token antiforgery. *@
+        <form method="post" @onsubmit="CambiarEstadoAsync" @formname="cambiar-estado">
+            <AntiforgeryToken />
+            <button type="submit" class="btn btn-sm @(expediente.Estado == EstadoRegistro.Activo ? "btn-outline-danger" : "btn-outline-success")">
+                @(expediente.Estado == EstadoRegistro.Activo ? "Desactivar abonado" : "Reactivar abonado")
+            </button>
+        </form>
+    </AuthorizeView>
 </div>
 
 <div class="card mb-4">
@@ -256,6 +277,17 @@ else if (Ok == "servicio")
         var resultado = await ObtenerExpediente.EjecutarAsync(AbonadoId);
         expediente = resultado.Valor;
         cargado = true;
+    }
+
+    private async Task CambiarEstadoAsync()
+    {
+        if (expediente is null) return;
+
+        var nuevo = expediente.Estado == EstadoRegistro.Activo ? EstadoRegistro.Inactivo : EstadoRegistro.Activo;
+        var resultado = await CambiarEstado.EjecutarAsync(new CambiarEstadoAbonadoSolicitud(AbonadoId, nuevo));
+
+        if (resultado.EsExitoso)
+            Navegacion.NavigateTo($"/abonados/{AbonadoId}?ok=estado", forceLoad: true);
     }
 
     private async Task GuardarPropiedadAsync()

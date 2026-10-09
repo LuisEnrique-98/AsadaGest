@@ -13,7 +13,8 @@ namespace Asada.Aplicacion.Abonados;
 public interface IRepositorioAbonados
 {
     /// <summary>True si ya existe un abonado de la organizacion actual con esa identificacion (ya normalizada).</summary>
-    Task<bool> ExisteIdentificacionAsync(TipoIdentificacion tipo, string identificacionNormalizada, CancellationToken ct = default);
+    /// <param name="excluirAbonadoId">Al editar, el propio abonado no cuenta como duplicado.</param>
+    Task<bool> ExisteIdentificacionAsync(TipoIdentificacion tipo, string identificacionNormalizada, int? excluirAbonadoId = null, CancellationToken ct = default);
 
     /// <summary>Guarda el abonado nuevo y le asigna, de forma atomica, su correlativo y su codigo (CB-AB-000125).</summary>
     Task AgregarAsync(Abonado abonado, CancellationToken ct = default);

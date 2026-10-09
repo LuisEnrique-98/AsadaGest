@@ -16,6 +16,8 @@ public static class CasosDeUsoServiceCollectionExtensions
         servicios.AddScoped<ObtenerExpedienteAbonadoCasoUso>();
         servicios.AddScoped<AgregarPropiedadCasoUso>();
         servicios.AddScoped<AgregarServicioCasoUso>();
+        servicios.AddScoped<ActualizarAbonadoCasoUso>();
+        servicios.AddScoped<CambiarEstadoAbonadoCasoUso>();
         return servicios;
     }
 }

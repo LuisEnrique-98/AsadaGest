@@ -18,8 +18,9 @@ public sealed class RepositorioAbonadosEnMemoria : IRepositorioAbonados
     public List<Abonado> Abonados { get; } = [];
     public int Guardados { get; private set; }
 
-    public Task<bool> ExisteIdentificacionAsync(TipoIdentificacion tipo, string identificacionNormalizada, CancellationToken ct = default)
-        => Task.FromResult(Abonados.Any(a => a.TipoIdentificacion == tipo && a.Identificacion == identificacionNormalizada));
+    public Task<bool> ExisteIdentificacionAsync(TipoIdentificacion tipo, string identificacionNormalizada, int? excluirAbonadoId = null, CancellationToken ct = default)
+        => Task.FromResult(Abonados.Any(a => a.TipoIdentificacion == tipo
+            && a.Identificacion == identificacionNormalizada && a.Id != excluirAbonadoId));
 
     public Task AgregarAsync(Abonado abonado, CancellationToken ct = default)
     {

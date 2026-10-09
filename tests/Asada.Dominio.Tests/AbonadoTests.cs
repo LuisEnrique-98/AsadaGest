@@ -46,3 +46,32 @@ public class AbonadoTests
         Assert.Equal(3, moroso.MensualidadesPendientes);
     }
 }
+
+public class AbonadoEdicionTests
+{
+    [Fact]
+    public void ActualizarDatos_NoTocaCodigoNiCorrelativo()
+    {
+        var abonado = new Abonado { Identificacion = "102340567", Nombre = "Maria", Codigo = "CB-AB-000007", Correlativo = 7 };
+
+        abonado.ActualizarDatos(TipoIdentificacion.Dimex, "123456789012", "Maria R.", "8888", "m@c.cr", "Centro");
+
+        Assert.Equal("CB-AB-000007", abonado.Codigo);
+        Assert.Equal(7, abonado.Correlativo);
+        Assert.Equal(TipoIdentificacion.Dimex, abonado.TipoIdentificacion);
+        Assert.Equal("Maria R.", abonado.Nombre);
+    }
+
+    [Fact]
+    public void CambiarEstado_ConservaPropiedadesYServicios()
+    {
+        var abonado = new Abonado { OrganizacionId = 1, Identificacion = "102340567", Nombre = "Maria" };
+        abonado.AgregarPropiedad("Casa").AgregarServicio(new DateOnly(2026, 1, 1));
+
+        abonado.CambiarEstado(EstadoRegistro.Inactivo);
+
+        Assert.Equal(EstadoRegistro.Inactivo, abonado.Estado);
+        Assert.Single(abonado.Propiedades);
+        Assert.Single(abonado.Propiedades[0].Servicios);
+    }
+}
