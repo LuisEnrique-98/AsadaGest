@@ -13,7 +13,6 @@
         <h1 class="mb-4">Sistema de Gestion ASADA</h1>
 
         <EditForm Model="Modelo" method="post" OnValidSubmit="IniciarSesionAsync" FormName="iniciar-sesion">
-            <AntiforgeryToken />
             <DataAnnotationsValidator />
             <ValidationSummary class="text-danger" role="alert" />
 

@@ -24,6 +24,8 @@ public class OrganizacionConfiguracion : IEntityTypeConfiguration<Organizacion>
         builder.Property(o => o.Telefono).HasMaxLength(30);
         builder.Property(o => o.Correo).HasMaxLength(150);
 
+        builder.Property(o => o.UltimoCorrelativoAbonado).HasDefaultValue(0).IsRequired();
+
         // Se guarda como texto (p. ej. "Activa") en vez de un entero plano, para que el
         // valor sea legible directamente en la base de datos sin tener que consultar el enum.
         builder.Property(o => o.Estado)

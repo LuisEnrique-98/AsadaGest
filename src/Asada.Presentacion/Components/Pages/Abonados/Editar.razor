@@ -1,0 +1,145 @@
+@page "/abonados/{AbonadoId:int}/editar"
+@attribute [Authorize(Roles = "Administrador,Operador")]
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Authorization
+
+@inject ObtenerExpedienteAbonadoCasoUso ObtenerExpediente
+@inject ActualizarAbonadoCasoUso ActualizarAbonado
+@inject NavigationManager Navegacion
+
+<PageTitle>Editar abonado</PageTitle>
+
+<p><a href="abonados/@AbonadoId">&larr; Volver al expediente</a></p>
+
+@if (cargado && Modelo is null)
+{
+    <div class="alert alert-warning">El abonado no existe o no pertenece a su ASADA.</div>
+    return;
+}
+
+@if (Modelo is null)
+{
+    <p><em>Cargando...</em></p>
+    return;
+}
+
+<h1>Editar abonado</h1>
+<p class="text-muted">Codigo: <strong>@codigo</strong> (el codigo no se puede cambiar)</p>
+
+<div class="row">
+    <div class="col-lg-7">
+        @* Sin <AntiforgeryToken />: el EditForm ya incluye el suyo (ver Sprint 1, incidencia 5). *@
+        <EditForm Model="Modelo" method="post" OnValidSubmit="GuardarAsync" FormName="editar-abonado">
+            <DataAnnotationsValidator />
+
+            @if (errores.Count > 0)
+            {
+                <div class="alert alert-danger" role="alert">
+                    <ul class="mb-0">@foreach (var e in errores) { <li>@e</li> }</ul>
+                </div>
+            }
+
+            <div class="row">
+                <div class="col-md-5 mb-3">
+                    <label for="tipo" class="form-label">Tipo de identificacion</label>
+                    <InputSelect id="tipo" class="form-select" @bind-Value="Modelo.TipoIdentificacion">
+                        @foreach (var tipo in Enum.GetValues<TipoIdentificacion>())
+                        {
+                            <option value="@tipo">@Etiquetas.De(tipo)</option>
+                        }
+                    </InputSelect>
+                </div>
+                <div class="col-md-7 mb-3">
+                    <label for="identificacion" class="form-label">Numero de identificacion</label>
+                    <InputText id="identificacion" class="form-control" @bind-Value="Modelo.Identificacion" />
+                    <ValidationMessage For="() => Modelo.Identificacion" />
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label for="nombre" class="form-label">Nombre completo o razon social</label>
+                <InputText id="nombre" class="form-control" @bind-Value="Modelo.Nombre" />
+                <ValidationMessage For="() => Modelo.Nombre" />
+            </div>
+
+            <div class="row">
+                <div class="col-md-5 mb-3">
+                    <label for="telefono" class="form-label">Telefono</label>
+                    <InputText id="telefono" class="form-control" @bind-Value="Modelo.Telefono" />
+                </div>
+                <div class="col-md-7 mb-3">
+                    <label for="correo" class="form-label">Correo electronico</label>
+                    <InputText id="correo" class="form-control" @bind-Value="Modelo.Correo" />
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label for="direccion" class="form-label">Direccion de contacto</label>
+                <InputTextArea id="direccion" class="form-control" rows="2" @bind-Value="Modelo.Direccion" />
+            </div>
+
+            <button type="submit" class="btn btn-primary">Guardar cambios</button>
+            <a class="btn btn-link" href="abonados/@AbonadoId">Cancelar</a>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    [Parameter] public int AbonadoId { get; set; }
+
+    private bool cargado;
+    private string codigo = "";
+    private List<string> errores = [];
+
+    [SupplyParameterFromForm(FormName = "editar-abonado")]
+    private ModeloEdicion? Modelo { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var resultado = await ObtenerExpediente.EjecutarAsync(AbonadoId);
+        cargado = true;
+        if (!resultado.EsExitoso) return;
+
+        var a = resultado.Valor!;
+        codigo = a.Codigo;
+        // Si la pagina llega por un envio del formulario, Modelo ya trae lo escrito por el usuario.
+        Modelo ??= new ModeloEdicion
+        {
+            TipoIdentificacion = a.TipoIdentificacion,
+            Identificacion = a.Identificacion,
+            Nombre = a.Nombre,
+            Telefono = a.Telefono,
+            Correo = a.Correo,
+            Direccion = a.Direccion,
+        };
+    }
+
+    private async Task GuardarAsync()
+    {
+        var resultado = await ActualizarAbonado.EjecutarAsync(new ActualizarAbonadoSolicitud(
+            AbonadoId, Modelo!.TipoIdentificacion, Modelo.Identificacion, Modelo.Nombre,
+            Modelo.Telefono, Modelo.Correo, Modelo.Direccion));
+
+        if (resultado.EsExitoso)
+        {
+            Navegacion.NavigateTo($"/abonados/{AbonadoId}?ok=editado", forceLoad: true);
+            return;
+        }
+        errores = resultado.Errores.ToList();
+    }
+
+    private sealed class ModeloEdicion
+    {
+        public TipoIdentificacion TipoIdentificacion { get; set; }
+
+        [Required(ErrorMessage = "Ingrese el numero de identificacion.")]
+        public string Identificacion { get; set; } = "";
+
+        [Required(ErrorMessage = "Ingrese el nombre.")]
+        public string Nombre { get; set; } = "";
+
+        public string? Telefono { get; set; }
+        public string? Correo { get; set; }
+        public string? Direccion { get; set; }
+    }
+}

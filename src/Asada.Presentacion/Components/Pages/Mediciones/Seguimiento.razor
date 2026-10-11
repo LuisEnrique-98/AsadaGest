@@ -1,0 +1,131 @@
+@page "/lecturas/seguimiento/{ServicioId:int}"
+@attribute [Authorize(Roles = "Administrador,Operador")]
+@using Microsoft.AspNetCore.Authorization
+@using Asada.Aplicacion.Common
+
+@inject ObtenerLecturasPeriodoCasoUso ObtenerLecturas
+@inject RegistrarSeguimientoLecturaCasoUso RegistrarSeguimiento
+@inject IProveedorFecha Fecha
+@inject NavigationManager Navegacion
+
+<PageTitle>Anotar lectura pendiente</PageTitle>
+
+<p><a href="lecturas?anio=@(anio)&mes=@(mes)">&larr; Volver a lecturas del periodo</a></p>
+
+@if (cargado && fila is null)
+{
+    <div class="alert alert-warning">El servicio no existe o no esta activo en este periodo.</div>
+    return;
+}
+
+@if (Modelo is null || fila is null)
+{
+    <p><em>Cargando...</em></p>
+    return;
+}
+
+<h1>Lectura pendiente</h1>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <p class="mb-1"><strong>@fila.AbonadoCodigo</strong> &middot; @fila.AbonadoNombre</p>
+        <p class="mb-1">@fila.PropiedadDireccion</p>
+        <p class="mb-0 text-muted">Periodo de @Etiquetas.Periodo(anio, mes)</p>
+    </div>
+</div>
+
+@if (fila.TieneLectura)
+{
+    <div class="alert alert-info">Este servicio ya tiene lectura en el periodo; no necesita anotacion.</div>
+    return;
+}
+
+<div class="row">
+    <div class="col-lg-6">
+        <p>Este servicio no tiene lectura en el periodo. Anote que se hara con el:</p>
+
+        @* Sin <AntiforgeryToken />: el EditForm ya incluye el suyo. *@
+        <EditForm Model="Modelo" method="post" OnValidSubmit="GuardarAsync" FormName="seguimiento-lectura">
+            @if (errores.Count > 0)
+            {
+                <div class="alert alert-danger" role="alert">
+                    <ul class="mb-0">@foreach (var e in errores) { <li>@e</li> }</ul>
+                </div>
+            }
+
+            <div class="mb-3">
+                <label for="decision" class="form-label">Decision</label>
+                <InputSelect id="decision" class="form-select" @bind-Value="Modelo.Decision">
+                    @foreach (var d in Enum.GetValues<DecisionSeguimientoLectura>())
+                    {
+                        <option value="@d">@Etiquetas.De(d)</option>
+                    }
+                </InputSelect>
+            </div>
+
+            <div class="mb-3">
+                <label for="nota" class="form-label">Nota (motivo de la omision, por ejemplo: casa cerrada, medidor inaccesible)</label>
+                <InputTextArea id="nota" class="form-control" rows="3" @bind-Value="Modelo.Nota" />
+            </div>
+
+            <button type="submit" class="btn btn-primary">Guardar anotacion</button>
+            <a class="btn btn-link" href="lecturas?anio=@(anio)&mes=@(mes)">Cancelar</a>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    [Parameter] public int ServicioId { get; set; }
+    [Parameter, SupplyParameterFromQuery(Name = "anio")] public int? AnioQuery { get; set; }
+    [Parameter, SupplyParameterFromQuery(Name = "mes")] public int? MesQuery { get; set; }
+
+    private FilaLecturaPeriodoDto? fila;
+    private bool cargado;
+    private int anio;
+    private int mes;
+    private List<string> errores = [];
+
+    [SupplyParameterFromForm(FormName = "seguimiento-lectura")]
+    private ModeloSeguimiento? Modelo { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var periodo = AnioQuery is int a && MesQuery is int m && ReglasPeriodo.EsMesValido(a, m)
+            ? (Anio: a, Mes: m)
+            : ReglasPeriodo.PeriodoPorDefecto(Fecha.Hoy);
+
+        anio = periodo.Anio;
+        mes = periodo.Mes;
+
+        var resultado = await ObtenerLecturas.EjecutarAsync(anio, mes);
+        fila = resultado.Valor?.Filas.FirstOrDefault(f => f.ServicioId == ServicioId);
+        cargado = true;
+        if (fila is null) return;
+
+        // Si ya habia una anotacion, el formulario arranca con sus valores.
+        Modelo ??= new ModeloSeguimiento
+        {
+            Decision = fila.Decision ?? DecisionSeguimientoLectura.LeerLoAntesPosible,
+            Nota = fila.NotaSeguimiento,
+        };
+    }
+
+    private async Task GuardarAsync()
+    {
+        var resultado = await RegistrarSeguimiento.EjecutarAsync(new RegistrarSeguimientoLecturaSolicitud(
+            ServicioId, anio, mes, Modelo!.Decision, Modelo.Nota));
+
+        if (resultado.EsExitoso)
+        {
+            Navegacion.NavigateTo($"/lecturas?anio={anio}&mes={mes}&ok=seguimiento", forceLoad: true);
+            return;
+        }
+        errores = resultado.Errores.ToList();
+    }
+
+    private sealed class ModeloSeguimiento
+    {
+        public DecisionSeguimientoLectura Decision { get; set; }
+        public string? Nota { get; set; }
+    }
+}

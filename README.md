@@ -121,6 +121,80 @@ tests/
   Asada.Dominio.Tests/      Pruebas unitarias de Organizacion (xUnit).
 ```
 
+## Sprint 1 -- Abonados
+
+Agrega el agregado **Abonado -> Propiedad -> Servicio**, con aislamiento por organizacion.
+
+- **Dominio:** `Abonado`, `Propiedad`, `Servicio`, `TipoIdentificacion` (cedula fisica, cedula juridica,
+  DIMEX, pasaporte), `EstadoRegistro`, `ReglasIdentificacion` (normaliza y valida el numero segun el tipo).
+  La morosidad vive en `Servicio` (correccion C-01), no en `Abonado`.
+- **Aplicacion:** `Resultado<T>`, `IRepositorioAbonados` y los casos de uso `CrearAbonado`,
+  `BuscarAbonados`, `ObtenerExpedienteAbonado`, `AgregarPropiedad`, `AgregarServicio`.
+- **Infraestructura:** configuraciones EF, `HasQueryFilter` para las 3 entidades nuevas, y
+  `RepositorioAbonados`. El correlativo (`CB-AB-000125`) sale de un contador por organizacion
+  (`organizaciones.ultimo_correlativo_abonado`) incrementado con `UPDATE ... RETURNING` dentro de
+  la misma transaccion que guarda el abonado.
+- **Presentacion:** `/abonados` (busqueda + paginacion), `/abonados/nuevo`, `/abonados/{id}`
+  (expediente con alta de propiedades y servicios) y `/cuenta/acceso-denegado`.
+
+Pasos para probarlo:
+
+```bash
+dotnet build
+dotnet test
+
+dotnet ef migrations add Sprint1Abonados \
+  --project src/Asada.Infraestructura \
+  --startup-project src/Asada.Presentacion
+
+dotnet run --project src/Asada.Presentacion   # en Desarrollo aplica la migracion sola
+```
+
+Decisiones a tener presentes:
+
+1. Las paginas son de **renderizado estatico (SSR)**, igual que el login: `ProveedorOrganizacion`
+   lee `HttpContext`, que no esta disponible dentro de un circuito interactivo de Blazor Server.
+   Si en el futuro se agrega `@rendermode InteractiveServer` a alguna pagina, hay que cambiar el
+   proveedor para que lea `AuthenticationStateProvider`.
+2. Solo `Administrador` y `Operador` pueden crear/agregar; `Consulta` solo ve. La matriz formal es Sprint 5.
+3. Identificacion unica por organizacion (`organizacion_id` + tipo + numero), guardada sin guiones.
+4. La validacion es manual (sin FluentValidation) para que `Asada.Aplicacion` siga sin dependencias.
+
+## Sprint 1b -- Edicion de abonados
+
+`/abonados/{id}/editar` (Administrador y Operador) corrige los datos del abonado; el codigo no cambia.
+El boton Desactivar/Reactivar del expediente (solo Administrador) cambia el estado sin borrar nada.
+La identificacion sigue siendo unica por ASADA y el propio abonado no cuenta como duplicado de si mismo.
+
+## Sprint 2 -- Mediciones
+
+- **Medidores** (`/servicios/{id}/medidores`): instalar, retirar y ver el historial. Un servicio tiene a lo sumo
+  un medidor activo (tambien garantizado por un indice unico filtrado en PostgreSQL). Cambiar un medidor =
+  retirar el actual (con su lectura final) e instalar el nuevo.
+- **Periodo de lectura:** la ultima semana de cada mes (`ReglasPeriodo`). Es una regla fija por ahora.
+- **Lecturas** (`/lecturas`): estado de un periodo, con los servicios con y sin lectura. Con la ventana ya
+  cerrada, cada servicio sin lectura genera una alerta; el operador la anota (`/lecturas/seguimiento/{id}`)
+  eligiendo "Leer lo antes posible" o "Esperar al mes siguiente".
+- **Registro de lectura** (`/lecturas/registrar/{id}`): calcula el consumo con `CalculadoraConsumo`.
+  RB-013: si hubo cambio de medidor entre dos lecturas se suman los tramos de cada medidor.
+- **Revision manual:** una lectura nunca se rechaza por "rara"; se guarda y queda marcada si (a) la fecha cae fuera
+  de la ventana, (b) el periodo anterior quedo sin lectura (RB-014: el consumo NO se reparte entre meses), o
+  (c) el consumo supera en mas de 50 % el promedio de los ultimos 3.
+- Solo Administrador y Operador registran; Consulta solo ve. La fecha de "hoy" es la de Costa Rica (UTC-6).
+
+Pasos:
+
+```bash
+dotnet build
+dotnet test
+dotnet ef migrations add Sprint2Mediciones \
+  --project src/Asada.Infraestructura \
+  --startup-project src/Asada.Presentacion
+dotnet run --project src/Asada.Presentacion
+```
+
+Recuerde: los formularios `EditForm` NO llevan `<AntiforgeryToken />` (ya lo incluyen).
+
 ## Siguiente paso
 
 Una vez que confirmes que `dotnet build` compila limpio en tu maquina (y me cuentes que
