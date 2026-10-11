@@ -22,6 +22,240 @@ namespace Asada.Infraestructura.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Asada.Dominio.Entidades.Abonado", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Codigo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("codigo");
+
+                    b.Property<int>("Correlativo")
+                        .HasColumnType("integer")
+                        .HasColumnName("correlativo");
+
+                    b.Property<string>("Correo")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("correo");
+
+                    b.Property<string>("Direccion")
+                        .HasMaxLength(400)
+                        .HasColumnType("character varying(400)")
+                        .HasColumnName("direccion");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("estado");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_creacion");
+
+                    b.Property<string>("Identificacion")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("identificacion");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("nombre");
+
+                    b.Property<int>("OrganizacionId")
+                        .HasColumnType("integer")
+                        .HasColumnName("organizacion_id");
+
+                    b.Property<string>("Telefono")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("telefono");
+
+                    b.Property<string>("TipoIdentificacion")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("tipo_identificacion");
+
+                    b.HasKey("Id")
+                        .HasName("pk_abonados");
+
+                    b.HasIndex("OrganizacionId", "Codigo")
+                        .IsUnique()
+                        .HasDatabaseName("ix_abonados_organizacion_id_codigo");
+
+                    b.HasIndex("OrganizacionId", "Correlativo")
+                        .IsUnique()
+                        .HasDatabaseName("ix_abonados_organizacion_id_correlativo");
+
+                    b.HasIndex("OrganizacionId", "TipoIdentificacion", "Identificacion")
+                        .IsUnique()
+                        .HasDatabaseName("ix_abonados_organizacion_id_tipo_identificacion_identificacion");
+
+                    b.ToTable("abonados", (string)null);
+                });
+
+            modelBuilder.Entity("Asada.Dominio.Entidades.Medicion", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Consumo")
+                        .HasPrecision(12, 3)
+                        .HasColumnType("numeric(12,3)")
+                        .HasColumnName("consumo");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_creacion");
+
+                    b.Property<DateOnly>("FechaLectura")
+                        .HasColumnType("date")
+                        .HasColumnName("fecha_lectura");
+
+                    b.Property<decimal>("Lectura")
+                        .HasPrecision(12, 3)
+                        .HasColumnType("numeric(12,3)")
+                        .HasColumnName("lectura");
+
+                    b.Property<int>("MedidorId")
+                        .HasColumnType("integer")
+                        .HasColumnName("medidor_id");
+
+                    b.Property<string>("MotivosRevision")
+                        .HasMaxLength(800)
+                        .HasColumnType("character varying(800)")
+                        .HasColumnName("motivos_revision");
+
+                    b.Property<string>("Observaciones")
+                        .HasMaxLength(400)
+                        .HasColumnType("character varying(400)")
+                        .HasColumnName("observaciones");
+
+                    b.Property<int>("OrganizacionId")
+                        .HasColumnType("integer")
+                        .HasColumnName("organizacion_id");
+
+                    b.Property<int>("PeriodoId")
+                        .HasColumnType("integer")
+                        .HasColumnName("periodo_id");
+
+                    b.Property<bool>("RequiereRevision")
+                        .HasColumnType("boolean")
+                        .HasColumnName("requiere_revision");
+
+                    b.Property<int>("ServicioId")
+                        .HasColumnType("integer")
+                        .HasColumnName("servicio_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_mediciones");
+
+                    b.HasIndex("MedidorId")
+                        .HasDatabaseName("ix_mediciones_medidor_id");
+
+                    b.HasIndex("OrganizacionId")
+                        .HasDatabaseName("ix_mediciones_organizacion_id");
+
+                    b.HasIndex("PeriodoId")
+                        .HasDatabaseName("ix_mediciones_periodo_id");
+
+                    b.HasIndex("ServicioId", "PeriodoId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_mediciones_servicio_id_periodo_id");
+
+                    b.ToTable("mediciones", (string)null);
+                });
+
+            modelBuilder.Entity("Asada.Dominio.Entidades.Medidor", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("estado");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_creacion");
+
+                    b.Property<DateOnly>("FechaInstalacion")
+                        .HasColumnType("date")
+                        .HasColumnName("fecha_instalacion");
+
+                    b.Property<DateOnly?>("FechaRetiro")
+                        .HasColumnType("date")
+                        .HasColumnName("fecha_retiro");
+
+                    b.Property<decimal?>("LecturaFinal")
+                        .HasPrecision(12, 3)
+                        .HasColumnType("numeric(12,3)")
+                        .HasColumnName("lectura_final");
+
+                    b.Property<decimal>("LecturaInicial")
+                        .HasPrecision(12, 3)
+                        .HasColumnType("numeric(12,3)")
+                        .HasColumnName("lectura_inicial");
+
+                    b.Property<string>("NumeroSerie")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("numero_serie");
+
+                    b.Property<string>("Observaciones")
+                        .HasMaxLength(400)
+                        .HasColumnType("character varying(400)")
+                        .HasColumnName("observaciones");
+
+                    b.Property<int>("OrganizacionId")
+                        .HasColumnType("integer")
+                        .HasColumnName("organizacion_id");
+
+                    b.Property<int>("ServicioId")
+                        .HasColumnType("integer")
+                        .HasColumnName("servicio_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_medidores");
+
+                    b.HasIndex("OrganizacionId", "NumeroSerie")
+                        .IsUnique()
+                        .HasDatabaseName("ix_medidores_organizacion_id_numero_serie");
+
+                    b.HasIndex(new[] { "ServicioId" }, "ix_medidores_servicio_id")
+                        .HasDatabaseName("ix_medidores_servicio_id");
+
+                    b.HasIndex(new[] { "ServicioId" }, "ix_medidores_un_activo_por_servicio")
+                        .IsUnique()
+                        .HasDatabaseName("ix_medidores_servicio_id1")
+                        .HasFilter("estado = 'Activo'");
+
+                    b.ToTable("medidores", (string)null);
+                });
+
             modelBuilder.Entity("Asada.Dominio.Entidades.Organizacion", b =>
                 {
                     b.Property<int>("Id")
@@ -92,6 +326,12 @@ namespace Asada.Infraestructura.Migrations
                         .HasColumnType("character varying(30)")
                         .HasColumnName("telefono");
 
+                    b.Property<int>("UltimoCorrelativoAbonado")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("ultimo_correlativo_abonado");
+
                     b.HasKey("Id")
                         .HasName("pk_organizaciones");
 
@@ -100,6 +340,225 @@ namespace Asada.Infraestructura.Migrations
                         .HasDatabaseName("ix_organizaciones_codigo");
 
                     b.ToTable("organizaciones", (string)null);
+                });
+
+            modelBuilder.Entity("Asada.Dominio.Entidades.Periodo", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("Anio")
+                        .HasColumnType("integer")
+                        .HasColumnName("anio");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("estado");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_creacion");
+
+                    b.Property<int>("Mes")
+                        .HasColumnType("integer")
+                        .HasColumnName("mes");
+
+                    b.Property<int>("OrganizacionId")
+                        .HasColumnType("integer")
+                        .HasColumnName("organizacion_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_periodos");
+
+                    b.HasIndex("OrganizacionId", "Anio", "Mes")
+                        .IsUnique()
+                        .HasDatabaseName("ix_periodos_organizacion_id_anio_mes");
+
+                    b.ToTable("periodos", (string)null);
+                });
+
+            modelBuilder.Entity("Asada.Dominio.Entidades.Propiedad", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AbonadoId")
+                        .HasColumnType("integer")
+                        .HasColumnName("abonado_id");
+
+                    b.Property<string>("Canton")
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)")
+                        .HasColumnName("canton");
+
+                    b.Property<string>("Direccion")
+                        .IsRequired()
+                        .HasMaxLength(400)
+                        .HasColumnType("character varying(400)")
+                        .HasColumnName("direccion");
+
+                    b.Property<string>("Distrito")
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)")
+                        .HasColumnName("distrito");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("estado");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_creacion");
+
+                    b.Property<int>("OrganizacionId")
+                        .HasColumnType("integer")
+                        .HasColumnName("organizacion_id");
+
+                    b.Property<string>("Provincia")
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)")
+                        .HasColumnName("provincia");
+
+                    b.Property<string>("Referencia")
+                        .HasMaxLength(400)
+                        .HasColumnType("character varying(400)")
+                        .HasColumnName("referencia");
+
+                    b.HasKey("Id")
+                        .HasName("pk_propiedades");
+
+                    b.HasIndex("AbonadoId")
+                        .HasDatabaseName("ix_propiedades_abonado_id");
+
+                    b.HasIndex("OrganizacionId")
+                        .HasDatabaseName("ix_propiedades_organizacion_id");
+
+                    b.ToTable("propiedades", (string)null);
+                });
+
+            modelBuilder.Entity("Asada.Dominio.Entidades.SeguimientoLectura", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Decision")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("decision");
+
+                    b.Property<DateTime>("FechaRegistro")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_registro");
+
+                    b.Property<string>("Nota")
+                        .HasMaxLength(400)
+                        .HasColumnType("character varying(400)")
+                        .HasColumnName("nota");
+
+                    b.Property<int>("OrganizacionId")
+                        .HasColumnType("integer")
+                        .HasColumnName("organizacion_id");
+
+                    b.Property<int>("PeriodoId")
+                        .HasColumnType("integer")
+                        .HasColumnName("periodo_id");
+
+                    b.Property<int>("ServicioId")
+                        .HasColumnType("integer")
+                        .HasColumnName("servicio_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_seguimientos_lectura");
+
+                    b.HasIndex("OrganizacionId")
+                        .HasDatabaseName("ix_seguimientos_lectura_organizacion_id");
+
+                    b.HasIndex("PeriodoId")
+                        .HasDatabaseName("ix_seguimientos_lectura_periodo_id");
+
+                    b.HasIndex("ServicioId", "PeriodoId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_seguimientos_lectura_servicio_id_periodo_id");
+
+                    b.ToTable("seguimientos_lectura", (string)null);
+                });
+
+            modelBuilder.Entity("Asada.Dominio.Entidades.Servicio", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("EsMoroso")
+                        .HasColumnType("boolean")
+                        .HasColumnName("es_moroso");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("estado");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_creacion");
+
+                    b.Property<DateOnly>("FechaInicio")
+                        .HasColumnType("date")
+                        .HasColumnName("fecha_inicio");
+
+                    b.Property<int>("MensualidadesPendientes")
+                        .HasColumnType("integer")
+                        .HasColumnName("mensualidades_pendientes");
+
+                    b.Property<decimal>("MontoPendiente")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("monto_pendiente");
+
+                    b.Property<string>("Observaciones")
+                        .HasMaxLength(400)
+                        .HasColumnType("character varying(400)")
+                        .HasColumnName("observaciones");
+
+                    b.Property<int>("OrganizacionId")
+                        .HasColumnType("integer")
+                        .HasColumnName("organizacion_id");
+
+                    b.Property<int>("PropiedadId")
+                        .HasColumnType("integer")
+                        .HasColumnName("propiedad_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_servicios");
+
+                    b.HasIndex("OrganizacionId")
+                        .HasDatabaseName("ix_servicios_organizacion_id");
+
+                    b.HasIndex("PropiedadId")
+                        .HasDatabaseName("ix_servicios_propiedad_id");
+
+                    b.ToTable("servicios", (string)null);
                 });
 
             modelBuilder.Entity("Asada.Infraestructura.Identidad.Rol", b =>
@@ -376,6 +835,138 @@ namespace Asada.Infraestructura.Migrations
                     b.ToTable("usuario_tokens", (string)null);
                 });
 
+            modelBuilder.Entity("Asada.Dominio.Entidades.Abonado", b =>
+                {
+                    b.HasOne("Asada.Dominio.Entidades.Organizacion", "Organizacion")
+                        .WithMany()
+                        .HasForeignKey("OrganizacionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_abonados_organizaciones_organizacion_id");
+
+                    b.Navigation("Organizacion");
+                });
+
+            modelBuilder.Entity("Asada.Dominio.Entidades.Medicion", b =>
+                {
+                    b.HasOne("Asada.Dominio.Entidades.Medidor", null)
+                        .WithMany()
+                        .HasForeignKey("MedidorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_mediciones_medidores_medidor_id");
+
+                    b.HasOne("Asada.Dominio.Entidades.Organizacion", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizacionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_mediciones_organizaciones_organizacion_id");
+
+                    b.HasOne("Asada.Dominio.Entidades.Periodo", null)
+                        .WithMany()
+                        .HasForeignKey("PeriodoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_mediciones_periodos_periodo_id");
+
+                    b.HasOne("Asada.Dominio.Entidades.Servicio", null)
+                        .WithMany()
+                        .HasForeignKey("ServicioId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_mediciones_servicios_servicio_id");
+                });
+
+            modelBuilder.Entity("Asada.Dominio.Entidades.Medidor", b =>
+                {
+                    b.HasOne("Asada.Dominio.Entidades.Organizacion", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizacionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_medidores_organizaciones_organizacion_id");
+
+                    b.HasOne("Asada.Dominio.Entidades.Servicio", null)
+                        .WithMany()
+                        .HasForeignKey("ServicioId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_medidores_servicios_servicio_id");
+                });
+
+            modelBuilder.Entity("Asada.Dominio.Entidades.Periodo", b =>
+                {
+                    b.HasOne("Asada.Dominio.Entidades.Organizacion", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizacionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_periodos_organizaciones_organizacion_id");
+                });
+
+            modelBuilder.Entity("Asada.Dominio.Entidades.Propiedad", b =>
+                {
+                    b.HasOne("Asada.Dominio.Entidades.Abonado", "Abonado")
+                        .WithMany("Propiedades")
+                        .HasForeignKey("AbonadoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_propiedades_abonados_abonado_id");
+
+                    b.HasOne("Asada.Dominio.Entidades.Organizacion", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizacionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_propiedades_organizaciones_organizacion_id");
+
+                    b.Navigation("Abonado");
+                });
+
+            modelBuilder.Entity("Asada.Dominio.Entidades.SeguimientoLectura", b =>
+                {
+                    b.HasOne("Asada.Dominio.Entidades.Organizacion", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizacionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_seguimientos_lectura_organizaciones_organizacion_id");
+
+                    b.HasOne("Asada.Dominio.Entidades.Periodo", null)
+                        .WithMany()
+                        .HasForeignKey("PeriodoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_seguimientos_lectura_periodos_periodo_id");
+
+                    b.HasOne("Asada.Dominio.Entidades.Servicio", null)
+                        .WithMany()
+                        .HasForeignKey("ServicioId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_seguimientos_lectura_servicios_servicio_id");
+                });
+
+            modelBuilder.Entity("Asada.Dominio.Entidades.Servicio", b =>
+                {
+                    b.HasOne("Asada.Dominio.Entidades.Organizacion", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizacionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_servicios_organizaciones_organizacion_id");
+
+                    b.HasOne("Asada.Dominio.Entidades.Propiedad", "Propiedad")
+                        .WithMany("Servicios")
+                        .HasForeignKey("PropiedadId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_servicios_propiedades_propiedad_id");
+
+                    b.Navigation("Propiedad");
+                });
+
             modelBuilder.Entity("Asada.Infraestructura.Identidad.Usuario", b =>
                 {
                     b.HasOne("Asada.Dominio.Entidades.Organizacion", "Organizacion")
@@ -442,6 +1033,16 @@ namespace Asada.Infraestructura.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_usuario_tokens_usuarios_user_id");
+                });
+
+            modelBuilder.Entity("Asada.Dominio.Entidades.Abonado", b =>
+                {
+                    b.Navigation("Propiedades");
+                });
+
+            modelBuilder.Entity("Asada.Dominio.Entidades.Propiedad", b =>
+                {
+                    b.Navigation("Servicios");
                 });
 #pragma warning restore 612, 618
         }

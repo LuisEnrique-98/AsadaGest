@@ -1,0 +1,249 @@
+@page "/servicios/{ServicioId:int}/medidores"
+@attribute [Authorize]
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Authorization
+@using Asada.Aplicacion.Common
+
+@inject ObtenerMedidoresServicioCasoUso ObtenerMedidores
+@inject InstalarMedidorCasoUso InstalarMedidor
+@inject RetirarMedidorCasoUso RetirarMedidor
+@inject IProveedorFecha Fecha
+@inject NavigationManager Navegacion
+
+<PageTitle>Medidores del servicio</PageTitle>
+
+@if (cargado && datos is null)
+{
+    <p><a href="abonados">&larr; Volver a abonados</a></p>
+    <div class="alert alert-warning">El servicio no existe o no pertenece a su ASADA.</div>
+    return;
+}
+
+@if (datos is null)
+{
+    <p><em>Cargando...</em></p>
+    return;
+}
+
+<p><a href="abonados/@(datos.AbonadoId)">&larr; Volver al expediente de @datos.AbonadoCodigo</a></p>
+
+@if (Ok == "instalado")
+{
+    <div class="alert alert-success">Medidor instalado.</div>
+}
+else if (Ok == "retirado")
+{
+    <div class="alert alert-success">Medidor retirado. Si fue un cambio de medidor, instale ahora el nuevo.</div>
+}
+
+<h1>Medidores del servicio #@datos.ServicioId</h1>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <p class="mb-1"><strong>@datos.AbonadoCodigo</strong> &middot; @datos.AbonadoNombre</p>
+        <p class="mb-0">@datos.PropiedadDireccion</p>
+    </div>
+</div>
+
+<h2 class="h4">Historial de medidores</h2>
+
+@if (datos.Medidores.Count == 0)
+{
+    <div class="alert alert-info">Este servicio todavia no tiene medidores.</div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-sm align-middle">
+            <thead>
+                <tr>
+                    <th>Serie</th>
+                    <th>Instalacion</th>
+                    <th class="text-end">Lectura inicial</th>
+                    <th>Estado</th>
+                    <th>Retiro</th>
+                    <th class="text-end">Lectura final</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var m in datos.Medidores)
+                {
+                    <tr>
+                        <td>@m.NumeroSerie</td>
+                        <td>@Etiquetas.Fecha(m.FechaInstalacion)</td>
+                        <td class="text-end">@Etiquetas.Metros(m.LecturaInicial)</td>
+                        <td>
+                            <span class="badge @(m.Estado == EstadoMedidor.Activo ? "bg-success" : "bg-secondary")">
+                                @(m.Estado == EstadoMedidor.Activo ? "Activo" : "Retirado")
+                            </span>
+                        </td>
+                        <td>@(m.FechaRetiro is DateOnly retiro ? Etiquetas.Fecha(retiro) : "—")</td>
+                        <td class="text-end">@(m.LecturaFinal is decimal final ? Etiquetas.Metros(final) : "—")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+<AuthorizeView Roles="Administrador,Operador" Context="permiso">
+    <div class="row mt-4">
+        @if (datos.MedidorActivo is not null && datos.EstadoServicio == EstadoRegistro.Activo)
+        {
+            <div class="col-lg-6 mb-4">
+                <h3 class="h5">Retirar el medidor @datos.MedidorActivo.NumeroSerie</h3>
+                <p class="text-muted">
+                    Para cambiar un medidor, registre su retiro con la lectura que marcaba y luego instale el nuevo.
+                    El sistema suma el consumo de ambos medidores en la siguiente lectura.
+                </p>
+
+                @* Sin <AntiforgeryToken />: el EditForm ya incluye el suyo. *@
+                <EditForm Model="ModeloRetiro!" method="post" OnValidSubmit="RetirarAsync" FormName="retirar-medidor">
+                    <DataAnnotationsValidator />
+
+                    @if (erroresRetiro.Count > 0)
+                    {
+                        <div class="alert alert-danger" role="alert">
+                            <ul class="mb-0">@foreach (var e in erroresRetiro) { <li>@e</li> }</ul>
+                        </div>
+                    }
+
+                    <div class="mb-3">
+                        <label for="r-fecha" class="form-label">Fecha de retiro</label>
+                        <InputDate id="r-fecha" class="form-control" @bind-Value="ModeloRetiro!.FechaRetiro" />
+                    </div>
+                    <div class="mb-3">
+                        <label for="r-lectura" class="form-label">Lectura final del medidor (m³)</label>
+                        <InputNumber id="r-lectura" class="form-control" @bind-Value="ModeloRetiro!.LecturaFinal" />
+                    </div>
+                    <button type="submit" class="btn btn-outline-danger">Retirar medidor</button>
+                </EditForm>
+            </div>
+
+            <div class="col-lg-6 mb-4">
+                <h3 class="h5">Lecturas</h3>
+                <p><a class="btn btn-primary" href="lecturas/registrar/@(datos.ServicioId)">Registrar lectura</a></p>
+            </div>
+        }
+        else if (datos.EstadoServicio == EstadoRegistro.Activo)
+        {
+            <div class="col-lg-6 mb-4">
+                <h3 class="h5">Instalar medidor</h3>
+
+                <EditForm Model="ModeloInstalacion!" method="post" OnValidSubmit="InstalarAsync" FormName="instalar-medidor">
+                    <DataAnnotationsValidator />
+
+                    @if (erroresInstalacion.Count > 0)
+                    {
+                        <div class="alert alert-danger" role="alert">
+                            <ul class="mb-0">@foreach (var e in erroresInstalacion) { <li>@e</li> }</ul>
+                        </div>
+                    }
+
+                    <div class="mb-3">
+                        <label for="i-serie" class="form-label">Numero de serie</label>
+                        <InputText id="i-serie" class="form-control" @bind-Value="ModeloInstalacion!.NumeroSerie" />
+                        <ValidationMessage For="() => ModeloInstalacion!.NumeroSerie" />
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="i-fecha" class="form-label">Fecha de instalacion</label>
+                            <InputDate id="i-fecha" class="form-control" @bind-Value="ModeloInstalacion!.FechaInstalacion" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="i-lectura" class="form-label">Lectura inicial (m³)</label>
+                            <InputNumber id="i-lectura" class="form-control" @bind-Value="ModeloInstalacion!.LecturaInicial" />
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="i-obs" class="form-label">Observaciones</label>
+                        <InputText id="i-obs" class="form-control" @bind-Value="ModeloInstalacion!.Observaciones" />
+                    </div>
+                    <button type="submit" class="btn btn-primary">Instalar medidor</button>
+                </EditForm>
+            </div>
+        }
+    </div>
+</AuthorizeView>
+
+@code {
+    [Parameter] public int ServicioId { get; set; }
+    [Parameter, SupplyParameterFromQuery(Name = "ok")] public string? Ok { get; set; }
+
+    private ServicioMedidoresDto? datos;
+    private bool cargado;
+    private List<string> erroresRetiro = [];
+    private List<string> erroresInstalacion = [];
+
+    [SupplyParameterFromForm(FormName = "retirar-medidor")]
+    private ModeloRetiroMedidor? ModeloRetiro { get; set; }
+
+    [SupplyParameterFromForm(FormName = "instalar-medidor")]
+    private ModeloInstalacionMedidor? ModeloInstalacion { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var resultado = await ObtenerMedidores.EjecutarAsync(ServicioId);
+        datos = resultado.Valor;
+        cargado = true;
+
+        // Si la pagina llega por un envio del formulario, el modelo ya trae lo que escribio el usuario.
+        ModeloRetiro ??= new ModeloRetiroMedidor { FechaRetiro = Fecha.Hoy };
+        ModeloInstalacion ??= new ModeloInstalacionMedidor { FechaInstalacion = Fecha.Hoy };
+    }
+
+    private async Task RetirarAsync()
+    {
+        var medidor = datos?.MedidorActivo;
+        if (medidor is null)
+        {
+            erroresRetiro = ["El servicio no tiene un medidor activo."];
+            return;
+        }
+
+        var resultado = await RetirarMedidor.EjecutarAsync(new RetirarMedidorSolicitud(
+            medidor.Id, ModeloRetiro!.FechaRetiro, ModeloRetiro.LecturaFinal ?? 0m));
+
+        if (resultado.EsExitoso)
+        {
+            Navegacion.NavigateTo($"/servicios/{ServicioId}/medidores?ok=retirado", forceLoad: true);
+            return;
+        }
+        erroresRetiro = resultado.Errores.ToList();
+    }
+
+    private async Task InstalarAsync()
+    {
+        var resultado = await InstalarMedidor.EjecutarAsync(new InstalarMedidorSolicitud(
+            ServicioId, ModeloInstalacion!.NumeroSerie, ModeloInstalacion.FechaInstalacion,
+            ModeloInstalacion.LecturaInicial ?? 0m, ModeloInstalacion.Observaciones));
+
+        if (resultado.EsExitoso)
+        {
+            Navegacion.NavigateTo($"/servicios/{ServicioId}/medidores?ok=instalado", forceLoad: true);
+            return;
+        }
+        erroresInstalacion = resultado.Errores.ToList();
+    }
+
+    private sealed class ModeloRetiroMedidor
+    {
+        public DateOnly FechaRetiro { get; set; }
+
+        [Required(ErrorMessage = "Ingrese la lectura final.")]
+        public decimal? LecturaFinal { get; set; }
+    }
+
+    private sealed class ModeloInstalacionMedidor
+    {
+        [Required(ErrorMessage = "Ingrese el numero de serie.")]
+        public string NumeroSerie { get; set; } = "";
+
+        public DateOnly FechaInstalacion { get; set; }
+
+        [Required(ErrorMessage = "Ingrese la lectura inicial (0 si es nuevo).")]
+        public decimal? LecturaInicial { get; set; } = 0m;
+
+        public string? Observaciones { get; set; }
+    }
+}

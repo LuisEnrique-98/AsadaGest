@@ -1,0 +1,110 @@
+﻿@page "/abonados/nuevo"
+@attribute [Authorize(Roles = "Administrador,Operador")]
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Authorization
+
+@inject CrearAbonadoCasoUso CrearAbonado
+@inject NavigationManager Navegacion
+
+<PageTitle>Nuevo abonado</PageTitle>
+
+<h1>Nuevo abonado</h1>
+
+<div class="row">
+    <div class="col-lg-7">
+        <EditForm Model="Modelo" method="post" OnValidSubmit="GuardarAsync" FormName="nuevo-abonado">
+            <DataAnnotationsValidator />
+
+            @if (errores.Count > 0)
+            {
+                <div class="alert alert-danger" role="alert">
+                    <ul class="mb-0">
+                        @foreach (var error in errores)
+                        {
+                            <li>@error</li>
+                        }
+                    </ul>
+                </div>
+            }
+
+            <div class="row">
+                <div class="col-md-5 mb-3">
+                    <label for="tipo" class="form-label">Tipo de identificacion</label>
+                    <InputSelect id="tipo" class="form-select" @bind-Value="Modelo.TipoIdentificacion">
+                        @foreach (var tipo in Enum.GetValues<TipoIdentificacion>())
+                        {
+                            <option value="@tipo">@Etiquetas.De(tipo)</option>
+                        }
+                    </InputSelect>
+                </div>
+                <div class="col-md-7 mb-3">
+                    <label for="identificacion" class="form-label">Numero de identificacion</label>
+                    <InputText id="identificacion" class="form-control" @bind-Value="Modelo.Identificacion" />
+                    <ValidationMessage For="() => Modelo.Identificacion" />
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label for="nombre" class="form-label">Nombre completo o razon social</label>
+                <InputText id="nombre" class="form-control" @bind-Value="Modelo.Nombre" />
+                <ValidationMessage For="() => Modelo.Nombre" />
+            </div>
+
+            <div class="row">
+                <div class="col-md-5 mb-3">
+                    <label for="telefono" class="form-label">Telefono</label>
+                    <InputText id="telefono" class="form-control" @bind-Value="Modelo.Telefono" />
+                </div>
+                <div class="col-md-7 mb-3">
+                    <label for="correo" class="form-label">Correo electronico</label>
+                    <InputText id="correo" class="form-control" @bind-Value="Modelo.Correo" />
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label for="direccion" class="form-label">Direccion de contacto</label>
+                <InputTextArea id="direccion" class="form-control" rows="2" @bind-Value="Modelo.Direccion" />
+            </div>
+
+            <button type="submit" class="btn btn-primary">Guardar abonado</button>
+            <a class="btn btn-link" href="abonados">Cancelar</a>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    private List<string> errores = [];
+
+    [SupplyParameterFromForm(FormName = "nuevo-abonado")]
+    private ModeloAbonado Modelo { get; set; } = new();
+
+    private async Task GuardarAsync()
+    {
+        var resultado = await CrearAbonado.EjecutarAsync(new CrearAbonadoSolicitud(
+            Modelo.TipoIdentificacion, Modelo.Identificacion, Modelo.Nombre,
+            Modelo.Telefono, Modelo.Correo, Modelo.Direccion));
+
+        if (resultado.EsExitoso)
+        {
+            Navegacion.NavigateTo($"/abonados/{resultado.Valor}?ok=abonado", forceLoad: true);
+            return;
+        }
+
+        errores = resultado.Errores.ToList();
+    }
+
+    private sealed class ModeloAbonado
+    {
+        public TipoIdentificacion TipoIdentificacion { get; set; } = TipoIdentificacion.CedulaFisica;
+
+        [Required(ErrorMessage = "Ingrese el numero de identificacion.")]
+        public string Identificacion { get; set; } = "";
+
+        [Required(ErrorMessage = "Ingrese el nombre.")]
+        public string Nombre { get; set; } = "";
+
+        public string? Telefono { get; set; }
+        public string? Correo { get; set; }
+        public string? Direccion { get; set; }
+    }
+}
