@@ -50,11 +50,19 @@ public class ReglasTarifaTests
         => Assert.Equal(valido, ReglasTarifa.Validar(0m, modo, valor, [new(null, 100m)]).Count == 0);
 
     [Fact]
-    public void MasDeDiezTramos_EsInvalido()
+    public void MasTramosQueElMaximo_EsInvalido()
     {
-        var tramos = Enumerable.Range(1, 11).Select(i => new TramoTarifa(i * 10m, 100m)).ToList();
+        var tramos = Enumerable.Range(1, ReglasTarifa.MaximoTramos + 1).Select(i => new TramoTarifa(i * 10m, 100m)).ToList();
         tramos[^1] = new TramoTarifa(null, 100m);
         Assert.Contains(ReglasTarifa.Validar(0m, ModoHidrante.NoAplica, 0m, tramos), e => e.Contains("maximo"));
+    }
+
+    [Fact]
+    public void ElMaximoDeTramos_EsValido()
+    {
+        var tramos = Enumerable.Range(1, ReglasTarifa.MaximoTramosConLimite).Select(i => new TramoTarifa(i * 10m, 100m)).ToList();
+        tramos.Add(new TramoTarifa(null, 100m));
+        Assert.Empty(ReglasTarifa.Validar(0m, ModoHidrante.NoAplica, 0m, tramos));
     }
 
     [Fact]

@@ -17,7 +17,11 @@ public sealed record TramoTarifa(decimal? LimiteSuperior, decimal PrecioPorMetro
 /// </summary>
 public static class ReglasTarifa
 {
-    public const int MaximoTramos = 10;
+    /// <summary>Tramos con limite que se pueden escribir, sin contar el excedente (el tramo final sin limite).</summary>
+    public const int MaximoTramosConLimite = 11;
+
+    /// <summary>Total de tramos de una tarifa: los que tienen limite mas el excedente.</summary>
+    public const int MaximoTramos = MaximoTramosConLimite + 1;
 
     public static IReadOnlyList<string> Validar(
         decimal cargoFijo, ModoHidrante modoHidrante, decimal valorHidrante, IReadOnlyList<TramoTarifa> tramos)
