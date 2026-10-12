@@ -199,8 +199,8 @@ Recuerde: los formularios `EditForm` NO llevan `<AntiforgeryToken />` (ya lo inc
 
 - **Categorias** (`/tarifas`): cada ASADA define las suyas (p. ej. Domiciliar, Empresarial). Cada servicio se asigna
   a una desde el expediente (boton "Categoria", `/servicios/{id}/categoria`). Un servicio sin categoria no se factura.
-- **Tarifas versionadas** (`/tarifas/nueva/{categoria}`): cargo fijo + hasta 10 tramos escalonados (cada m³ se cobra
-  al precio de su tramo; el ultimo tramo sin limite) + hidrantes (por m³, monto fijo o no se cobra). Una tarifa no se
+- **Tarifas versionadas** (`/tarifas/nueva/{categoria}`): cargo fijo + hasta 11 tramos con limite + un precio de
+  excedente obligatorio (consumo mayor al ultimo limite); cada m³ se cobra al precio de su tramo + hidrantes (por m³, monto fijo o no se cobra). Una tarifa no se
   edita: un cambio de precios es una version nueva con fecha "vigente desde" posterior a la anterior y al ultimo mes
   ya facturado. Para un periodo rige la ultima version vigente al cierre del mes.
 - **Simulador** (`/tarifas/{id}?consumo=20`): calcula el desglose sin guardar nada, para revisar contra el pliego.

@@ -62,9 +62,9 @@
 
     <h2 class="h5 mt-2">Tramos de consumo</h2>
     <p class="text-muted mb-2">
-        Escriba los tramos en orden. Cada m³ se cobra al precio del tramo en que cae (por ejemplo, con 0-15 y 15-25,
-        un consumo de 20 m³ cobra 15 m³ al primer precio y 5 m³ al segundo). Deje vacio el limite del <strong>ultimo</strong>
-        tramo: cubre todo el consumo que exceda al anterior. Las filas sin precio se ignoran.
+        Escriba los tramos en orden, cada uno con el limite hasta donde llega y su precio. Cada m³ se cobra al precio del
+        tramo en que cae: con 0-15 a ₡300 y 15-25 a ₡450, un consumo de 20 m³ cobra 15 m³ a ₡300 y 5 m³ a ₡450.
+        Las filas que no use dejelas vacias.
     </p>
 
     <div class="table-responsive">
@@ -89,8 +89,19 @@
                     </tr>
                 }
             </tbody>
+            <tfoot>
+                <tr class="table-light">
+                    <td></td>
+                    <td><strong>Excedente</strong><br /><small class="text-muted">consumo mayor al ultimo limite</small></td>
+                    <td><InputText type="number" step="any" min="0" class="form-control form-control-sm" @bind-Value="Modelo.PrecioExcedente" /></td>
+                </tr>
+            </tfoot>
         </table>
     </div>
+    <p class="form-text mt-0 mb-3" style="max-width: 36rem">
+        El precio del excedente es obligatorio: se cobra a todo m³ que pase el limite de la ultima fila.
+        Si la tarifa cobra lo mismo por cualquier consumo, deje vacias las filas y escriba solo el excedente.
+    </p>
 
     <h2 class="h5 mt-2">Tarifa de hidrantes</h2>
     <div class="row">
@@ -144,12 +155,12 @@
         Modelo ??= new ModeloTarifa { VigenteDesde = new DateOnly(Fecha.Hoy.Year, Fecha.Hoy.Month, 1).AddMonths(1) };
 
         // El formulario siempre muestra todas las filas (en un envio llegan solo las que el navegador mando).
-        while (Modelo.Tramos.Count < ReglasTarifa.MaximoTramos) Modelo.Tramos.Add(new FilaTramo());
+        while (Modelo.Tramos.Count < ReglasTarifa.MaximoTramosConLimite) Modelo.Tramos.Add(new FilaTramo());
     }
 
     private async Task GuardarAsync()
     {
-        var tramos = LeerTramos(Modelo!.Tramos, out var erroresTramos);
+        var tramos = LeerTramos(Modelo!, out var erroresTramos);
         if (erroresTramos.Count > 0)
         {
             errores = erroresTramos;
@@ -176,42 +187,40 @@
         public decimal? ValorHidrante { get; set; }
         public string? Observaciones { get; set; }
         public List<FilaTramo> Tramos { get; set; } = [];
+        public string? PrecioExcedente { get; set; }
     }
 
-    /// <summary>Convierte las filas escritas en tramos. Las filas totalmente vacias se ignoran.</summary>
-    private static List<TramoTarifa> LeerTramos(List<FilaTramo> filas, out List<string> errores)
+    /// <summary>
+    /// Convierte las filas escritas (todas con limite) y el excedente en los tramos de la tarifa.
+    /// Las filas totalmente vacias se ignoran; el excedente siempre es el ultimo tramo, sin limite.
+    /// </summary>
+    private static List<TramoTarifa> LeerTramos(ModeloTarifa modelo, out List<string> errores)
     {
         errores = [];
         var tramos = new List<TramoTarifa>();
-        for (var i = 0; i < filas.Count; i++)
+        for (var i = 0; i < modelo.Tramos.Count; i++)
         {
-            var hastaTexto = filas[i].Hasta?.Trim();
-            var precioTexto = filas[i].Precio?.Trim();
+            var hastaTexto = modelo.Tramos[i].Hasta?.Trim();
+            var precioTexto = modelo.Tramos[i].Precio?.Trim();
             if (string.IsNullOrEmpty(hastaTexto) && string.IsNullOrEmpty(precioTexto)) continue;
 
-            if (string.IsNullOrEmpty(precioTexto))
-            {
-                errores.Add($"Fila {i + 1}: indique el precio por m³.");
-                continue;
-            }
-            if (!LeerNumero(precioTexto, out var precio))
-            {
-                errores.Add($"Fila {i + 1}: el precio no es un numero valido.");
-                continue;
-            }
+            var fila = i + 1;
+            if (string.IsNullOrEmpty(hastaTexto)) { errores.Add($"Fila {fila}: indique hasta cuantos m³ llega el tramo."); continue; }
+            if (string.IsNullOrEmpty(precioTexto)) { errores.Add($"Fila {fila}: indique el precio por m³."); continue; }
+            if (!LeerNumero(hastaTexto, out var hasta)) { errores.Add($"Fila {fila}: el limite no es un numero valido."); continue; }
+            if (!LeerNumero(precioTexto, out var precio)) { errores.Add($"Fila {fila}: el precio no es un numero valido."); continue; }
 
-            decimal? hasta = null;
-            if (!string.IsNullOrEmpty(hastaTexto))
-            {
-                if (!LeerNumero(hastaTexto, out var limite))
-                {
-                    errores.Add($"Fila {i + 1}: el limite no es un numero valido.");
-                    continue;
-                }
-                hasta = limite;
-            }
             tramos.Add(new TramoTarifa(hasta, precio));
         }
+
+        var excedenteTexto = modelo.PrecioExcedente?.Trim();
+        if (string.IsNullOrEmpty(excedenteTexto))
+            errores.Add("Indique el precio por m³ del excedente (consumo mayor al ultimo limite).");
+        else if (!LeerNumero(excedenteTexto, out var precioExcedente))
+            errores.Add("El precio del excedente no es un numero valido.");
+        else
+            tramos.Add(new TramoTarifa(null, precioExcedente));
+
         return tramos;
     }
 
