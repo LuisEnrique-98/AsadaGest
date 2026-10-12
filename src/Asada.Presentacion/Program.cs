@@ -2,6 +2,7 @@ using Asada.Infraestructura;
 using Asada.Infraestructura.Identidad;
 using Asada.Infraestructura.Persistence;
 using Asada.Infraestructura.Persistence.Seed;
+using Asada.Presentacion;
 using Asada.Presentacion.Components;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -18,6 +19,9 @@ builder.Services.AddAuthorization();
 // Registra AsadaDbContext, ASP.NET Core Identity, IProveedorOrganizacion y la configuracion
 // de la cookie de autenticacion. Ver InfraestructuraServiceCollectionExtensions.
 builder.Services.AgregarInfraestructura(builder.Configuration);
+
+// Casos de uso de Asada.Aplicacion (Abonados, Propiedades, Servicios...).
+builder.Services.AgregarCasosDeUso();
 
 var app = builder.Build();
 
