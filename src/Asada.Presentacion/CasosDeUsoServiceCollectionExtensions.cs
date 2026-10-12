@@ -1,5 +1,7 @@
 using Asada.Aplicacion.Abonados;
 using Asada.Aplicacion.Mediciones;
+using Asada.Aplicacion.Recibos;
+using Asada.Aplicacion.Tarifas;
 
 namespace Asada.Presentacion;
 
@@ -27,6 +29,18 @@ public static class CasosDeUsoServiceCollectionExtensions
         servicios.AddScoped<RegistrarLecturaCasoUso>();
         servicios.AddScoped<ObtenerLecturasPeriodoCasoUso>();
         servicios.AddScoped<RegistrarSeguimientoLecturaCasoUso>();
+
+        // Sprint 3: categorias, tarifas y recibos.
+        servicios.AddScoped<CrearCategoriaCasoUso>();
+        servicios.AddScoped<ObtenerPanelTarifasCasoUso>();
+        servicios.AddScoped<CrearTarifaCasoUso>();
+        servicios.AddScoped<ObtenerTarifaCasoUso>();
+        servicios.AddScoped<SimularReciboCasoUso>();
+        servicios.AddScoped<ObtenerCategoriaServicioCasoUso>();
+        servicios.AddScoped<AsignarCategoriaServicioCasoUso>();
+        servicios.AddScoped<ObtenerFacturacionPeriodoCasoUso>();
+        servicios.AddScoped<GenerarRecibosPeriodoCasoUso>();
+        servicios.AddScoped<ObtenerReciboCasoUso>();
         return servicios;
     }
 }

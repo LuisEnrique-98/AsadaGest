@@ -22,6 +22,11 @@ public class ServicioConfiguracion : IEntityTypeConfiguration<Servicio>
             .HasForeignKey(s => s.OrganizacionId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        builder.HasOne(s => s.Categoria)
+            .WithMany()
+            .HasForeignKey(s => s.CategoriaId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder.HasOne(s => s.Propiedad)
             .WithMany(p => p.Servicios)
             .HasForeignKey(s => s.PropiedadId)

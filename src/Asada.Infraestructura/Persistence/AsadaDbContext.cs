@@ -31,6 +31,12 @@ public class AsadaDbContext(DbContextOptions<AsadaDbContext> options, IProveedor
     public DbSet<Periodo> Periodos => Set<Periodo>();
     public DbSet<Medicion> Mediciones => Set<Medicion>();
     public DbSet<SeguimientoLectura> SeguimientosLectura => Set<SeguimientoLectura>();
+    public DbSet<CategoriaServicio> CategoriasServicio => Set<CategoriaServicio>();
+    public DbSet<Tarifa> Tarifas => Set<Tarifa>();
+    public DbSet<TarifaBloque> TarifaBloques => Set<TarifaBloque>();
+    public DbSet<Recibo> Recibos => Set<Recibo>();
+    public DbSet<ReciboDetalle> ReciboDetalles => Set<ReciboDetalle>();
+    public DbSet<CorrelativoRecibo> CorrelativosRecibo => Set<CorrelativoRecibo>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -45,6 +51,18 @@ public class AsadaDbContext(DbContextOptions<AsadaDbContext> options, IProveedor
         builder.ApplyConfiguration(new PeriodoConfiguracion());
         builder.ApplyConfiguration(new MedicionConfiguracion());
         builder.ApplyConfiguration(new SeguimientoLecturaConfiguracion());
+        builder.ApplyConfiguration(new CategoriaServicioConfiguracion());
+        builder.ApplyConfiguration(new TarifaConfiguracion());
+        builder.ApplyConfiguration(new TarifaBloqueConfiguracion());
+        builder.ApplyConfiguration(new ReciboConfiguracion());
+        builder.ApplyConfiguration(new ReciboDetalleConfiguracion());
+
+        builder.Entity<CorrelativoRecibo>(e =>
+        {
+            e.ToTable("correlativos_recibo");
+            e.HasKey(c => new { c.OrganizacionId, c.Anio });
+            e.HasOne<Organizacion>().WithMany().HasForeignKey(c => c.OrganizacionId).OnDelete(DeleteBehavior.Restrict);
+        });
 
         // Renombrar las tablas propias de Identity a nombres en espanol, consistentes con
         // el resto del esquema. Las columnas internas (email, password_hash, etc.) se dejan
@@ -80,6 +98,16 @@ public class AsadaDbContext(DbContextOptions<AsadaDbContext> options, IProveedor
             proveedorOrganizacion.EsSuperadministrador || m.OrganizacionId == proveedorOrganizacion.OrganizacionId);
         builder.Entity<SeguimientoLectura>().HasQueryFilter(s =>
             proveedorOrganizacion.EsSuperadministrador || s.OrganizacionId == proveedorOrganizacion.OrganizacionId);
+
+        // Sprint 3: categorias, tarifas y recibos. Los tramos (tarifa_bloques) y las lineas de
+        // recibo (recibo_detalles) no llevan organizacion_id: solo se leen a traves de su tarifa
+        // o su recibo, que si estan filtrados.
+        builder.Entity<CategoriaServicio>().HasQueryFilter(c =>
+            proveedorOrganizacion.EsSuperadministrador || c.OrganizacionId == proveedorOrganizacion.OrganizacionId);
+        builder.Entity<Tarifa>().HasQueryFilter(t =>
+            proveedorOrganizacion.EsSuperadministrador || t.OrganizacionId == proveedorOrganizacion.OrganizacionId);
+        builder.Entity<Recibo>().HasQueryFilter(r =>
+            proveedorOrganizacion.EsSuperadministrador || r.OrganizacionId == proveedorOrganizacion.OrganizacionId);
 
         // A proposito, Usuario NO lleva HasQueryFilter todavia, aunque tiene OrganizacionId:
         // UserManager/SignInManager consultan esta misma tabla para autenticar, y en ese

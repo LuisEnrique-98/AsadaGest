@@ -37,6 +37,10 @@ else if (Ok == "estado")
 {
     <div class="alert alert-success">Estado del abonado actualizado.</div>
 }
+else if (Ok == "categoria")
+{
+    <div class="alert alert-success">Categoria del servicio actualizada.</div>
+}
 else if (Ok == "propiedad")
 {
     <div class="alert alert-success">Propiedad agregada.</div>
@@ -123,6 +127,7 @@ else if (Ok == "servicio")
                                 <th>Servicio</th>
                                 <th>Inicio</th>
                                 <th>Estado</th>
+                                <th>Categoria</th>
                                 <th>Morosidad</th>
                                 <th>Observaciones</th>
                                 <th></th>
@@ -136,6 +141,16 @@ else if (Ok == "servicio")
                                     <td>@Etiquetas.Fecha(servicio.FechaInicio)</td>
                                     <td><span class="badge @Etiquetas.ClaseEstado(servicio.Estado)">@Etiquetas.De(servicio.Estado)</span></td>
                                     <td>
+                                        @if (servicio.CategoriaNombre is not null)
+                                        {
+                                            @servicio.CategoriaNombre
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-warning text-dark">Sin categoria</span>
+                                        }
+                                    </td>
+                                    <td>
                                         @if (servicio.EsMoroso)
                                         {
                                             <span class="badge bg-danger">Moroso</span>
@@ -147,7 +162,12 @@ else if (Ok == "servicio")
                                         }
                                     </td>
                                     <td>@servicio.Observaciones</td>
-                                    <td><a class="btn btn-sm btn-outline-primary" href="servicios/@(servicio.Id)/medidores">Medidores</a></td>
+                                    <td class="text-nowrap">
+                                        <a class="btn btn-sm btn-outline-primary" href="servicios/@(servicio.Id)/medidores">Medidores</a>
+                                        <AuthorizeView Roles="Administrador,Operador" Context="permisoCategoria">
+                                            <a class="btn btn-sm btn-outline-secondary" href="servicios/@(servicio.Id)/categoria">Categoria</a>
+                                        </AuthorizeView>
+                                    </td>
                                 </tr>
                             }
                         </tbody>

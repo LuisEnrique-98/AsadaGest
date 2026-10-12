@@ -1,0 +1,186 @@
+@page "/tarifas"
+@attribute [Authorize]
+@using Microsoft.AspNetCore.Authorization
+
+@inject ObtenerPanelTarifasCasoUso ObtenerPanel
+@inject CrearCategoriaCasoUso CrearCategoria
+@inject NavigationManager Navegacion
+
+<PageTitle>Tarifas</PageTitle>
+
+<h1>Tarifas</h1>
+
+<p class="text-muted">
+    Cada servicio pertenece a una categoria tarifaria. Cada categoria tiene su historial de tarifas: un cambio de precios
+    se registra como una version nueva con su fecha de vigencia, y los recibos ya emitidos conservan la tarifa con que se calcularon.
+</p>
+
+@if (Ok == "categoria")
+{
+    <div class="alert alert-success">Categoria creada. Ahora registre su tarifa.</div>
+}
+else if (Ok == "tarifa")
+{
+    <div class="alert alert-success">Tarifa registrada.</div>
+}
+
+@if (panel is null)
+{
+    <p><em>Cargando...</em></p>
+    return;
+}
+
+@if (panel.ServiciosSinCategoria > 0)
+{
+    <div class="alert alert-warning">
+        <strong>@panel.ServiciosSinCategoria servicio(s) activo(s) sin categoria.</strong>
+        No se les puede generar recibo hasta asignarles una categoria (desde el expediente del abonado, boton "Categoria").
+    </div>
+}
+
+@if (panel.Categorias.Count == 0)
+{
+    <div class="alert alert-info">Todavia no hay categorias. Cree la primera (por ejemplo "Domiciliar").</div>
+}
+
+@foreach (var fila in panel.Categorias)
+{
+    <div class="card mb-3">
+        <div class="card-body">
+            <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+                <div>
+                    <h2 class="h5 mb-1">
+                        @fila.Categoria.Nombre
+                        @if (fila.Categoria.Estado != EstadoRegistro.Activo)
+                        {
+                            <span class="badge bg-secondary ms-1">Inactiva</span>
+                        }
+                    </h2>
+                    @if (!string.IsNullOrWhiteSpace(fila.Categoria.Descripcion))
+                    {
+                        <p class="mb-1 text-muted">@fila.Categoria.Descripcion</p>
+                    }
+                    <small class="text-muted">@fila.Categoria.CantidadServicios servicio(s) activo(s)</small>
+                </div>
+                <AuthorizeView Roles="Administrador" Context="permiso">
+                    @if (fila.Categoria.Estado == EstadoRegistro.Activo)
+                    {
+                        <a class="btn btn-sm btn-primary" href="tarifas/nueva/@(fila.Categoria.Id)">Nueva version de tarifa</a>
+                    }
+                </AuthorizeView>
+            </div>
+
+            @if (fila.Versiones.Count == 0)
+            {
+                <div class="alert alert-warning mb-0">Esta categoria no tiene tarifa: sus servicios no se pueden facturar.</div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Vigente desde</th>
+                                <th class="text-end">Cargo fijo</th>
+                                <th>Tramos</th>
+                                <th>Hidrantes</th>
+                                <th></th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var v in fila.Versiones)
+                            {
+                                <tr class="@(v.RigeHoy ? "table-success" : "")">
+                                    <td>@Etiquetas.Fecha(v.VigenteDesde)</td>
+                                    <td class="text-end">@Etiquetas.Colones(v.CargoFijo)</td>
+                                    <td>@v.CantidadTramos</td>
+                                    <td>@Etiquetas.Hidrante(v.ModoHidrante, v.ValorHidrante)</td>
+                                    <td>
+                                        @if (v.RigeHoy)
+                                        {
+                                            <span class="badge bg-success">Rige hoy</span>
+                                        }
+                                        else if (v.EsFutura)
+                                        {
+                                            <span class="badge bg-info text-dark">Futura</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">Historica</span>
+                                        }
+                                    </td>
+                                    <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="tarifas/@(v.Id)">Ver y simular</a></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+<AuthorizeView Roles="Administrador" Context="permiso">
+    <div class="row mt-4">
+        <div class="col-lg-6">
+            <h2 class="h5">Nueva categoria</h2>
+            @* Sin <AntiforgeryToken />: el EditForm ya incluye el suyo. *@
+            <EditForm Model="ModeloCategoria!" method="post" OnValidSubmit="CrearCategoriaAsync" FormName="crear-categoria">
+
+                @if (errores.Count > 0)
+                {
+                    <div class="alert alert-danger" role="alert">
+                        <ul class="mb-0">@foreach (var e in errores) { <li>@e</li> }</ul>
+                    </div>
+                }
+
+                <div class="mb-3">
+                    <label for="nombre" class="form-label">Nombre</label>
+                    <InputText id="nombre" class="form-control" @bind-Value="ModeloCategoria!.Nombre" placeholder="Domiciliar" />
+                </div>
+                <div class="mb-3">
+                    <label for="desc" class="form-label">Descripcion (opcional)</label>
+                    <InputText id="desc" class="form-control" @bind-Value="ModeloCategoria!.Descripcion" />
+                </div>
+                <button type="submit" class="btn btn-primary">Crear categoria</button>
+            </EditForm>
+        </div>
+    </div>
+</AuthorizeView>
+
+@code {
+    [Parameter, SupplyParameterFromQuery(Name = "ok")] public string? Ok { get; set; }
+
+    private PanelTarifasDto? panel;
+    private List<string> errores = [];
+
+    [SupplyParameterFromForm(FormName = "crear-categoria")]
+    private ModeloNuevaCategoria? ModeloCategoria { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        panel = await ObtenerPanel.EjecutarAsync();
+        ModeloCategoria ??= new ModeloNuevaCategoria();
+    }
+
+    private async Task CrearCategoriaAsync()
+    {
+        var resultado = await CrearCategoria.EjecutarAsync(
+            new CrearCategoriaSolicitud(ModeloCategoria!.Nombre, ModeloCategoria.Descripcion));
+
+        if (resultado.EsExitoso)
+        {
+            Navegacion.NavigateTo($"/tarifas/nueva/{resultado.Valor}?ok=categoria", forceLoad: true);
+            return;
+        }
+        errores = resultado.Errores.ToList();
+    }
+
+    private sealed class ModeloNuevaCategoria
+    {
+        public string? Nombre { get; set; }
+
+        public string? Descripcion { get; set; }
+    }
+}
