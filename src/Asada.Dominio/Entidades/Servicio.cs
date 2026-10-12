@@ -18,6 +18,11 @@ public class Servicio
     public int PropiedadId { get; set; }
     public Propiedad? Propiedad { get; set; }
 
+    /// <summary>Categoria tarifaria (Sprint 3). Null en servicios creados antes de que existieran
+    /// categorias: esos servicios no se facturan hasta que se les asigne una.</summary>
+    public int? CategoriaId { get; set; }
+    public CategoriaServicio? Categoria { get; set; }
+
     public DateOnly FechaInicio { get; set; }
     public EstadoRegistro Estado { get; set; } = EstadoRegistro.Activo;
     public string? Observaciones { get; set; }
