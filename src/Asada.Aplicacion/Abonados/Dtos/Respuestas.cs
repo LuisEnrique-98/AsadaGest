@@ -19,7 +19,8 @@ public sealed record ServicioDto(
     string? Observaciones,
     bool EsMoroso,
     int MensualidadesPendientes,
-    decimal MontoPendiente);
+    decimal MontoPendiente,
+    string? CategoriaNombre = null);
 
 public sealed record PropiedadDto(
     int Id,
