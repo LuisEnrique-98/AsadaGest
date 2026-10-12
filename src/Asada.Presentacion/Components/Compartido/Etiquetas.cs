@@ -1,3 +1,4 @@
+using Asada.Aplicacion.Recibos.Dtos;
 using Asada.Dominio.Enums;
 
 namespace Asada.Presentacion.Components.Compartido;
@@ -61,4 +62,49 @@ public static class Etiquetas
     public static string Fecha(DateOnly fecha) => fecha.ToString("dd/MM/yyyy");
 
     public static string Colones(decimal monto) => $"₡{monto:N2}";
+
+    public static string De(ModoHidrante modo) => modo switch
+    {
+        ModoHidrante.NoAplica => "No se cobra",
+        ModoHidrante.PorMetroCubico => "Por m³ consumido",
+        ModoHidrante.MontoFijo => "Monto fijo por recibo",
+        _ => modo.ToString(),
+    };
+
+    /// <summary>Tarifa de hidrantes en una linea: "₡12,50 por m³", "₡300,00 por recibo" o "No se cobra".</summary>
+    public static string Hidrante(ModoHidrante modo, decimal valor) => modo switch
+    {
+        ModoHidrante.PorMetroCubico => $"{Precio(valor)} por m³",
+        ModoHidrante.MontoFijo => $"{Colones(valor)} por recibo",
+        _ => "No se cobra",
+    };
+
+    /// <summary>Precio unitario: hasta 4 decimales, sin ceros de mas (₡312,5 -> ₡312,50).</summary>
+    public static string Precio(decimal precio)
+        => decimal.Round(precio, 2) == precio ? Colones(precio) : $"₡{precio:#,##0.00##}";
+
+    public static string De(EstadoFacturacion estado) => estado switch
+    {
+        EstadoFacturacion.ConRecibo => "Con recibo",
+        EstadoFacturacion.ListoParaFacturar => "Listo para facturar",
+        EstadoFacturacion.SinLectura => "Sin lectura",
+        EstadoFacturacion.SinCategoria => "Sin categoria",
+        EstadoFacturacion.SinTarifa => "Sin tarifa vigente",
+        _ => estado.ToString(),
+    };
+
+    public static string ClaseFacturacion(EstadoFacturacion estado) => estado switch
+    {
+        EstadoFacturacion.ConRecibo => "bg-success",
+        EstadoFacturacion.ListoParaFacturar => "bg-primary",
+        EstadoFacturacion.SinLectura => "bg-secondary",
+        _ => "bg-warning text-dark",
+    };
+
+    public static string De(EstadoRecibo estado) => estado switch
+    {
+        EstadoRecibo.Emitido => "Emitido",
+        EstadoRecibo.Anulado => "Anulado",
+        _ => estado.ToString(),
+    };
 }

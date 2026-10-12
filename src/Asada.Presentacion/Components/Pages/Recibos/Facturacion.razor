@@ -1,0 +1,231 @@
+@page "/recibos"
+@attribute [Authorize]
+@using Microsoft.AspNetCore.Authorization
+@using Asada.Aplicacion.Common
+
+@inject ObtenerFacturacionPeriodoCasoUso ObtenerFacturacion
+@inject GenerarRecibosPeriodoCasoUso GenerarRecibos
+@inject IProveedorFecha Fecha
+@inject NavigationManager Navegacion
+
+<PageTitle>Recibos del periodo</PageTitle>
+
+<h1>Recibos del periodo</h1>
+
+@if (Ok == "generados")
+{
+    <div class="alert alert-success">
+        Se generaron <strong>@Generados recibo(s)</strong>.
+        @if (ParaRevision > 0)
+        {
+            <span>De ellos, @ParaRevision con la lectura marcada para revision (senalados en el listado).</span>
+        }
+    </div>
+}
+else if (Ok == "ninguno")
+{
+    <div class="alert alert-info">No habia servicios listos para facturar; no se genero ningun recibo.</div>
+}
+
+@* Seleccion del periodo con un formulario GET: la pagina es SSR, el periodo viaja en la URL. *@
+<form method="get" action="recibos" class="row g-2 align-items-end mb-3">
+    <div class="col-auto">
+        <label for="mes" class="form-label">Mes</label>
+        <select id="mes" name="mes" class="form-select">
+            @for (var m = 1; m <= 12; m++)
+            {
+                <option value="@m" selected="@(m == mes)">@Etiquetas.Mes(m)</option>
+            }
+        </select>
+    </div>
+    <div class="col-auto">
+        <label for="anio" class="form-label">Anio</label>
+        <input id="anio" name="anio" type="number" min="2000" max="2100" class="form-control" value="@anio" />
+    </div>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-outline-primary">Ver periodo</button>
+    </div>
+</form>
+
+@if (error is not null)
+{
+    <div class="alert alert-danger">@error</div>
+    return;
+}
+
+@if (datos is null)
+{
+    <p><em>Cargando...</em></p>
+    return;
+}
+
+<div class="card mb-3">
+    <div class="card-body">
+        <h2 class="h5 mb-2">Facturacion de @Etiquetas.Periodo(datos.Anio, datos.Mes)</h2>
+        <p class="mb-1">
+            @datos.Total servicio(s) &middot; <strong>@datos.ConRecibo con recibo</strong> (@Etiquetas.Colones(datos.MontoEmitido))
+            &middot; @datos.Listos listo(s) para facturar
+        </p>
+        <p class="mb-0 text-muted">
+            Pendientes: @datos.SinLectura sin lectura &middot; @datos.SinCategoria sin categoria &middot; @datos.SinTarifa sin tarifa vigente
+        </p>
+    </div>
+</div>
+
+@if (datos.SinCategoria > 0 || datos.SinTarifa > 0)
+{
+    <div class="alert alert-warning">
+        Hay servicios con lectura que no se pueden facturar:
+        @if (datos.SinCategoria > 0) { <span>asigneles una categoria desde el expediente del abonado. </span> }
+        @if (datos.SinTarifa > 0) { <span>su categoria no tiene una tarifa que rija en este periodo (<a href="tarifas">ver tarifas</a>).</span> }
+    </div>
+}
+
+@if (datos.Listos > 0)
+{
+    <AuthorizeView Roles="Administrador,Operador" Context="permiso">
+        <div class="card border-primary mb-3">
+            <div class="card-body">
+                <h2 class="h5">Generar recibos</h2>
+                <p class="mb-2">
+                    Se generaran <strong>@datos.Listos recibo(s)</strong> de @Etiquetas.Periodo(datos.Anio, datos.Mes).
+                    @if (datos.ListosParaRevision > 0)
+                    {
+                        <span class="text-warning-emphasis">@datos.ListosParaRevision tienen la lectura marcada para revision: se facturan igual y quedan senalados.</span>
+                    }
+                </p>
+                <p class="text-muted small mb-2">
+                    Revise las lecturas antes de generar: la anulacion de recibos todavia no esta disponible.
+                    Los servicios sin lectura no se facturan; puede volver a generar despues y solo se facturan los nuevos.
+                </p>
+
+                @* Sin <AntiforgeryToken />: el EditForm ya incluye el suyo. El periodo viaja en la URL (anio, mes). *@
+                <EditForm Model="Modelo!" method="post" OnValidSubmit="GenerarAsync" FormName="generar-recibos" class="row g-2 align-items-end">
+                    @if (errores.Count > 0)
+                    {
+                        <div class="col-12">
+                            <div class="alert alert-danger mb-2" role="alert">
+                                <ul class="mb-0">@foreach (var e in errores) { <li>@e</li> }</ul>
+                            </div>
+                        </div>
+                    }
+                    <div class="col-auto">
+                        <label for="vence" class="form-label">Fecha de vencimiento</label>
+                        <InputDate id="vence" class="form-control" @bind-Value="Modelo!.FechaVencimiento" />
+                    </div>
+                    <div class="col-auto">
+                        <button type="submit" class="btn btn-primary">Generar @datos.Listos recibo(s)</button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </AuthorizeView>
+}
+
+@if (datos.Total == 0)
+{
+    <div class="alert alert-info">No hay servicios activos para este periodo.</div>
+    return;
+}
+
+<div class="table-responsive">
+    <table class="table table-hover align-middle">
+        <thead>
+            <tr>
+                <th>Abonado</th>
+                <th>Propiedad</th>
+                <th>Categoria</th>
+                <th class="text-end">Consumo</th>
+                <th>Estado</th>
+                <th>Recibo</th>
+                <th class="text-end">Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var f in datos.Filas)
+            {
+                <tr>
+                    <td>
+                        <a href="abonados/@f.AbonadoId">@f.AbonadoCodigo</a><br />
+                        <small>@f.AbonadoNombre</small>
+                    </td>
+                    <td>@f.PropiedadDireccion</td>
+                    <td>
+                        @if (f.CategoriaNombre is not null)
+                        {
+                            @f.CategoriaNombre
+                        }
+                        else
+                        {
+                            <a href="servicios/@(f.ServicioId)/categoria"><span class="badge bg-warning text-dark">Asignar</span></a>
+                        }
+                    </td>
+                    <td class="text-end">@(f.Consumo is decimal c ? Etiquetas.Metros(c) : "—")</td>
+                    <td>
+                        <span class="badge @Etiquetas.ClaseFacturacion(f.Estado)">@Etiquetas.De(f.Estado)</span>
+                        @if (f.LecturaRequiereRevision)
+                        {
+                            <span class="badge bg-warning text-dark">Lectura para revision</span>
+                        }
+                    </td>
+                    <td>
+                        @if (f.ReciboId is int id)
+                        {
+                            <a href="recibos/@id">@f.ReciboNumero</a>
+                        }
+                    </td>
+                    <td class="text-end">@(f.Total is decimal t ? Etiquetas.Colones(t) : "")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    [Parameter, SupplyParameterFromQuery(Name = "anio")] public int? Anio { get; set; }
+    [Parameter, SupplyParameterFromQuery(Name = "mes")] public int? Mes { get; set; }
+    [Parameter, SupplyParameterFromQuery(Name = "ok")] public string? Ok { get; set; }
+    [Parameter, SupplyParameterFromQuery(Name = "n")] public int? Generados { get; set; }
+    [Parameter, SupplyParameterFromQuery(Name = "rev")] public int? ParaRevision { get; set; }
+
+    private int anio;
+    private int mes;
+    private FacturacionPeriodoDto? datos;
+    private string? error;
+    private List<string> errores = [];
+
+    [SupplyParameterFromForm(FormName = "generar-recibos")]
+    private ModeloGenerar? Modelo { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Por defecto, el mismo periodo que la pantalla de lecturas.
+        (anio, mes) = Anio is int a && Mes is int m && ReglasPeriodo.EsMesValido(a, m)
+            ? (a, m)
+            : ReglasPeriodo.PeriodoPorDefecto(Fecha.Hoy);
+
+        var resultado = await ObtenerFacturacion.EjecutarAsync(anio, mes);
+        datos = resultado.Valor;
+        error = resultado.EsExitoso ? null : string.Join(" ", resultado.Errores);
+
+        Modelo ??= new ModeloGenerar { FechaVencimiento = Fecha.Hoy.AddDays(15) };
+    }
+
+    private async Task GenerarAsync()
+    {
+        var resultado = await GenerarRecibos.EjecutarAsync(new GenerarRecibosSolicitud(anio, mes, Modelo!.FechaVencimiento));
+        if (resultado.EsExitoso)
+        {
+            var r = resultado.Valor!;
+            var ok = r.Generados > 0 ? $"generados&n={r.Generados}&rev={r.ParaRevision}" : "ninguno";
+            Navegacion.NavigateTo($"/recibos?anio={anio}&mes={mes}&ok={ok}", forceLoad: true);
+            return;
+        }
+        errores = resultado.Errores.ToList();
+    }
+
+    private sealed class ModeloGenerar
+    {
+        public DateOnly FechaVencimiento { get; set; }
+    }
+}

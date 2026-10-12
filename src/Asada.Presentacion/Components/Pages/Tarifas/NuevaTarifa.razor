@@ -1,0 +1,229 @@
+@page "/tarifas/nueva/{CategoriaId:int}"
+@attribute [Authorize(Roles = "Administrador")]
+@using Microsoft.AspNetCore.Authorization
+@using Asada.Aplicacion.Common
+
+@inject ObtenerPanelTarifasCasoUso ObtenerPanel
+@inject CrearTarifaCasoUso CrearTarifa
+@inject IProveedorFecha Fecha
+@inject NavigationManager Navegacion
+
+<PageTitle>Nueva tarifa</PageTitle>
+
+<p><a href="tarifas">&larr; Volver a tarifas</a></p>
+
+@if (cargado && categoria is null)
+{
+    <div class="alert alert-warning">La categoria no existe o no pertenece a su ASADA.</div>
+    return;
+}
+
+@if (Modelo is null || categoria is null)
+{
+    <p><em>Cargando...</em></p>
+    return;
+}
+
+@if (Ok == "categoria")
+{
+    <div class="alert alert-success">Categoria "@categoria.Categoria.Nombre" creada. Registre ahora su tarifa.</div>
+}
+
+<h1>Nueva tarifa: @categoria.Categoria.Nombre</h1>
+
+@if (categoria.VersionVigente is { } vigente)
+{
+    <p class="text-muted">
+        Tarifa que rige hoy: desde el @Etiquetas.Fecha(vigente.VigenteDesde) (<a href="tarifas/@(vigente.Id)">ver</a>).
+        La version nueva no la modifica: rige a partir de la fecha que indique.
+    </p>
+}
+
+@* Sin <AntiforgeryToken />: el EditForm ya incluye el suyo. *@
+<EditForm Model="Modelo" method="post" OnValidSubmit="GuardarAsync" FormName="nueva-tarifa">
+    @if (errores.Count > 0)
+    {
+        <div class="alert alert-danger" role="alert">
+            <ul class="mb-0">@foreach (var e in errores) { <li>@e</li> }</ul>
+        </div>
+    }
+
+    <div class="row">
+        <div class="col-md-4 mb-3">
+            <label for="desde" class="form-label">Vigente desde</label>
+            <InputDate id="desde" class="form-control" @bind-Value="Modelo.VigenteDesde" />
+            <div class="form-text">Para un periodo rige la ultima version vigente al cierre del mes.</div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <label for="fijo" class="form-label">Cargo fijo mensual (₡)</label>
+            <InputNumber id="fijo" class="form-control" @bind-Value="Modelo.CargoFijo" />
+        </div>
+    </div>
+
+    <h2 class="h5 mt-2">Tramos de consumo</h2>
+    <p class="text-muted mb-2">
+        Escriba los tramos en orden. Cada m³ se cobra al precio del tramo en que cae (por ejemplo, con 0-15 y 15-25,
+        un consumo de 20 m³ cobra 15 m³ al primer precio y 5 m³ al segundo). Deje vacio el limite del <strong>ultimo</strong>
+        tramo: cubre todo el consumo que exceda al anterior. Las filas sin precio se ignoran.
+    </p>
+
+    <div class="table-responsive">
+        <table class="table table-sm align-middle" style="max-width: 36rem">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Hasta (m³)</th>
+                    <th>Precio por m³ (₡)</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (var i = 0; i < Modelo.Tramos.Count; i++)
+                {
+                    var indice = i;
+                    <tr>
+                        <td>@(indice + 1)</td>
+                        @* Texto y no InputNumber: el navegador envia vacias las filas sin usar, y un numero
+                           vacio dentro de una lista hace que el enlace descarte la fila completa. *@
+                        <td><InputText type="number" step="any" min="0" class="form-control form-control-sm" @bind-Value="Modelo.Tramos[indice].Hasta" /></td>
+                        <td><InputText type="number" step="any" min="0" class="form-control form-control-sm" @bind-Value="Modelo.Tramos[indice].Precio" /></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <h2 class="h5 mt-2">Tarifa de hidrantes</h2>
+    <div class="row">
+        <div class="col-md-4 mb-3">
+            <label for="modo" class="form-label">Forma de cobro</label>
+            <InputSelect id="modo" class="form-select" @bind-Value="Modelo.ModoHidrante">
+                @foreach (var modo in Enum.GetValues<ModoHidrante>())
+                {
+                    <option value="@modo">@Etiquetas.De(modo)</option>
+                }
+            </InputSelect>
+        </div>
+        <div class="col-md-4 mb-3">
+            <label for="hidrante" class="form-label">Monto (₡)</label>
+            <InputNumber id="hidrante" class="form-control" @bind-Value="Modelo.ValorHidrante" />
+            <div class="form-text">Por m³ o por recibo, segun la forma de cobro. 0 si no se cobra.</div>
+        </div>
+    </div>
+
+    <div class="mb-3" style="max-width: 36rem">
+        <label for="obs" class="form-label">Observaciones (opcional)</label>
+        <InputText id="obs" class="form-control" @bind-Value="Modelo.Observaciones" placeholder="Pliego tarifario vigente, resolucion, etc." />
+    </div>
+
+    <div class="alert alert-info" style="max-width: 36rem">
+        Una vez registrada, la tarifa no se puede editar: si hay un error, registre una version nueva con fecha posterior.
+        Revisela con el simulador antes de generar recibos.
+    </div>
+
+    <button type="submit" class="btn btn-primary">Registrar tarifa</button>
+    <a class="btn btn-link" href="tarifas">Cancelar</a>
+</EditForm>
+
+@code {
+    [Parameter] public int CategoriaId { get; set; }
+    [Parameter, SupplyParameterFromQuery(Name = "ok")] public string? Ok { get; set; }
+
+    private CategoriaConTarifasDto? categoria;
+    private bool cargado;
+    private List<string> errores = [];
+
+    [SupplyParameterFromForm(FormName = "nueva-tarifa")]
+    private ModeloTarifa? Modelo { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var panel = await ObtenerPanel.EjecutarAsync();
+        categoria = panel.Categorias.FirstOrDefault(c => c.Categoria.Id == CategoriaId);
+        cargado = true;
+
+        Modelo ??= new ModeloTarifa { VigenteDesde = new DateOnly(Fecha.Hoy.Year, Fecha.Hoy.Month, 1).AddMonths(1) };
+
+        // El formulario siempre muestra todas las filas (en un envio llegan solo las que el navegador mando).
+        while (Modelo.Tramos.Count < ReglasTarifa.MaximoTramos) Modelo.Tramos.Add(new FilaTramo());
+    }
+
+    private async Task GuardarAsync()
+    {
+        var tramos = LeerTramos(Modelo!.Tramos, out var erroresTramos);
+        if (erroresTramos.Count > 0)
+        {
+            errores = erroresTramos;
+            return;
+        }
+
+        var resultado = await CrearTarifa.EjecutarAsync(new CrearTarifaSolicitud(
+            CategoriaId, Modelo.VigenteDesde, Modelo.CargoFijo ?? 0m, Modelo.ModoHidrante,
+            Modelo.ValorHidrante ?? 0m, Modelo.Observaciones, tramos));
+
+        if (resultado.EsExitoso)
+        {
+            Navegacion.NavigateTo($"/tarifas/{resultado.Valor}?ok=tarifa", forceLoad: true);
+            return;
+        }
+        errores = resultado.Errores.ToList();
+    }
+
+    private sealed class ModeloTarifa
+    {
+        public DateOnly VigenteDesde { get; set; }
+        public decimal? CargoFijo { get; set; }
+        public ModoHidrante ModoHidrante { get; set; } = ModoHidrante.NoAplica;
+        public decimal? ValorHidrante { get; set; }
+        public string? Observaciones { get; set; }
+        public List<FilaTramo> Tramos { get; set; } = [];
+    }
+
+    /// <summary>Convierte las filas escritas en tramos. Las filas totalmente vacias se ignoran.</summary>
+    private static List<TramoTarifa> LeerTramos(List<FilaTramo> filas, out List<string> errores)
+    {
+        errores = [];
+        var tramos = new List<TramoTarifa>();
+        for (var i = 0; i < filas.Count; i++)
+        {
+            var hastaTexto = filas[i].Hasta?.Trim();
+            var precioTexto = filas[i].Precio?.Trim();
+            if (string.IsNullOrEmpty(hastaTexto) && string.IsNullOrEmpty(precioTexto)) continue;
+
+            if (string.IsNullOrEmpty(precioTexto))
+            {
+                errores.Add($"Fila {i + 1}: indique el precio por m³.");
+                continue;
+            }
+            if (!LeerNumero(precioTexto, out var precio))
+            {
+                errores.Add($"Fila {i + 1}: el precio no es un numero valido.");
+                continue;
+            }
+
+            decimal? hasta = null;
+            if (!string.IsNullOrEmpty(hastaTexto))
+            {
+                if (!LeerNumero(hastaTexto, out var limite))
+                {
+                    errores.Add($"Fila {i + 1}: el limite no es un numero valido.");
+                    continue;
+                }
+                hasta = limite;
+            }
+            tramos.Add(new TramoTarifa(hasta, precio));
+        }
+        return tramos;
+    }
+
+    // Un input type="number" siempre envia el valor con punto decimal, sin importar el idioma
+    // del navegador; se acepta tambien la coma por si alguien escribe en un campo de texto.
+    private static bool LeerNumero(string texto, out decimal valor)
+        => decimal.TryParse(texto.Replace(',', '.'), System.Globalization.NumberStyles.Number,
+            System.Globalization.CultureInfo.InvariantCulture, out valor);
+
+    private sealed class FilaTramo
+    {
+        public string? Hasta { get; set; }
+        public string? Precio { get; set; }
+    }
+}

@@ -60,6 +60,7 @@ public class RepositorioAbonados(AsadaDbContext db) : IRepositorioAbonados
         => db.Abonados
             .Include(a => a.Propiedades)
                 .ThenInclude(p => p.Servicios)
+                    .ThenInclude(s => s.Categoria)
             .FirstOrDefaultAsync(a => a.Id == abonadoId, ct);
 
     public async Task<PaginaResultado<AbonadoResumenDto>> BuscarAsync(

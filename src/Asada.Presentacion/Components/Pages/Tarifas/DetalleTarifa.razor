@@ -1,0 +1,141 @@
+@page "/tarifas/{TarifaId:int}"
+@attribute [Authorize]
+@using Microsoft.AspNetCore.Authorization
+
+@inject ObtenerTarifaCasoUso ObtenerTarifa
+@inject SimularReciboCasoUso Simular
+
+<PageTitle>Tarifa</PageTitle>
+
+<p><a href="tarifas">&larr; Volver a tarifas</a></p>
+
+@if (cargado && tarifa is null)
+{
+    <div class="alert alert-warning">La tarifa no existe o no pertenece a su ASADA.</div>
+    return;
+}
+
+@if (tarifa is null)
+{
+    <p><em>Cargando...</em></p>
+    return;
+}
+
+@if (Ok == "tarifa")
+{
+    <div class="alert alert-success">Tarifa registrada. Compruebe algunos consumos con el simulador.</div>
+}
+
+<h1>
+    Tarifa @tarifa.CategoriaNombre
+    @if (tarifa.RigeHoy)
+    {
+        <span class="badge bg-success fs-6 align-middle">Rige hoy</span>
+    }
+    else if (tarifa.EsFutura)
+    {
+        <span class="badge bg-info text-dark fs-6 align-middle">Futura</span>
+    }
+    else
+    {
+        <span class="badge bg-secondary fs-6 align-middle">Historica</span>
+    }
+</h1>
+
+<div class="row">
+    <div class="col-lg-6 mb-4">
+        <dl class="row mb-2">
+            <dt class="col-sm-5">Vigente desde</dt>
+            <dd class="col-sm-7">@Etiquetas.Fecha(tarifa.VigenteDesde)</dd>
+            <dt class="col-sm-5">Cargo fijo mensual</dt>
+            <dd class="col-sm-7">@Etiquetas.Colones(tarifa.CargoFijo)</dd>
+            <dt class="col-sm-5">Hidrantes</dt>
+            <dd class="col-sm-7">@Etiquetas.Hidrante(tarifa.ModoHidrante, tarifa.ValorHidrante)</dd>
+            @if (!string.IsNullOrWhiteSpace(tarifa.Observaciones))
+            {
+                <dt class="col-sm-5">Observaciones</dt>
+                <dd class="col-sm-7">@tarifa.Observaciones</dd>
+            }
+        </dl>
+
+        <table class="table table-sm">
+            <thead>
+                <tr><th>Tramo de consumo</th><th class="text-end">Precio por m³</th></tr>
+            </thead>
+            <tbody>
+                @foreach (var t in tarifa.Tramos)
+                {
+                    <tr><td>@t.Descripcion</td><td class="text-end">@Etiquetas.Precio(t.PrecioPorMetroCubico)</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="col-lg-6 mb-4">
+        <h2 class="h5">Simulador</h2>
+        <p class="text-muted">Calcula cuanto cobraria esta tarifa por un consumo, sin guardar nada.</p>
+
+        @* Formulario GET: el consumo viaja en la URL, no modifica datos. *@
+        <form method="get" action="tarifas/@(TarifaId)" class="row g-2 align-items-end mb-3">
+            <div class="col-auto">
+                <label for="consumo" class="form-label">Consumo (m³)</label>
+                <input id="consumo" name="consumo" type="number" min="0" step="0.001" class="form-control" value="@Consumo" />
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-outline-primary">Calcular</button>
+            </div>
+        </form>
+
+        @if (errorSimulacion is not null)
+        {
+            <div class="alert alert-danger">@errorSimulacion</div>
+        }
+        else if (simulacion is not null)
+        {
+            <table class="table table-sm">
+                <thead>
+                    <tr><th>Concepto</th><th class="text-end">m³</th><th class="text-end">Precio</th><th class="text-end">Monto</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var l in simulacion.Lineas)
+                    {
+                        <tr>
+                            <td>@l.Concepto</td>
+                            <td class="text-end">@(l.Cantidad is decimal c ? c.ToString("0.###") : "")</td>
+                            <td class="text-end">@(l.PrecioUnitario is decimal p ? Etiquetas.Precio(p) : "")</td>
+                            <td class="text-end">@Etiquetas.Colones(l.Monto)</td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr class="fw-bold"><td colspan="3">Total</td><td class="text-end">@Etiquetas.Colones(simulacion.Total)</td></tr>
+                </tfoot>
+            </table>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public int TarifaId { get; set; }
+    [Parameter, SupplyParameterFromQuery(Name = "consumo")] public decimal? Consumo { get; set; }
+    [Parameter, SupplyParameterFromQuery(Name = "ok")] public string? Ok { get; set; }
+
+    private TarifaDetalleDto? tarifa;
+    private bool cargado;
+    private DesgloseRecibo? simulacion;
+    private string? errorSimulacion;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var resultado = await ObtenerTarifa.EjecutarAsync(TarifaId);
+        tarifa = resultado.Valor;
+        cargado = true;
+
+        if (tarifa is not null && Consumo is decimal consumo)
+        {
+            var r = await Simular.EjecutarAsync(TarifaId, consumo);
+            simulacion = r.Valor;
+            errorSimulacion = r.EsExitoso ? null : string.Join(" ", r.Errores);
+        }
+    }
+}
