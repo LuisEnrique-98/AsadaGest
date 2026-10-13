@@ -48,7 +48,10 @@ public sealed record FilaLecturaPeriodoDto(
     string? ObservacionesLectura,
     // Anotacion del operador (null si no hay):
     DecisionSeguimientoLectura? Decision,
-    string? NotaSeguimiento)
+    string? NotaSeguimiento,
+    // Sprint 5: id de la lectura (para corregirla) y quien la registro.
+    int? MedicionId,
+    string? RegistradaPorNombre)
 {
     public bool TieneLectura => Lectura.HasValue;
     public bool TieneMedidor => NumeroSerieMedidor is not null;
@@ -60,8 +63,11 @@ public sealed record LecturasPeriodoDto(
     DateOnly InicioVentana,
     DateOnly FinVentana,
     EstadoVentanaLectura EstadoVentana,
-    IReadOnlyList<FilaLecturaPeriodoDto> Filas)
+    IReadOnlyList<FilaLecturaPeriodoDto> Filas,
+    EstadoPeriodo EstadoPeriodo)
 {
+    public bool PeriodoCerrado => EstadoPeriodo == EstadoPeriodo.Cerrado;
+
     public int Total => Filas.Count;
     public int ConLectura => Filas.Count(f => f.TieneLectura);
     public int SinLectura => Filas.Count(f => !f.TieneLectura);
@@ -69,4 +75,36 @@ public sealed record LecturasPeriodoDto(
 
     /// <summary>Hay alerta cuando la ventana ya paso y quedan servicios sin lectura.</summary>
     public bool HayAlerta => EstadoVentana == EstadoVentanaLectura.Cerrada && SinLectura > 0;
+}
+
+/// <summary>Una lectura con todo lo necesario para revisarla, corregirla o anularla.</summary>
+public sealed record LecturaDetalleDto(
+    int MedicionId,
+    int ServicioId,
+    int AbonadoId,
+    string AbonadoCodigo,
+    string AbonadoNombre,
+    string PropiedadDireccion,
+    int Anio,
+    int Mes,
+    EstadoPeriodo EstadoPeriodo,
+    string NumeroSerieMedidor,
+    DateOnly FechaLectura,
+    decimal Lectura,
+    decimal Consumo,
+    bool RequiereRevision,
+    string? MotivosRevision,
+    string? Observaciones,
+    DateTime FechaRegistro,
+    string? RegistradaPorNombre,
+    DateTime? FechaUltimaCorreccion,
+    string? CorregidaPorNombre,
+    string? MotivoCorreccion,
+    // Recibo emitido con esta lectura (impide modificarla):
+    int? ReciboId,
+    string? ReciboNumero,
+    /// <summary>Null si se puede corregir o anular; si no, la razon.</summary>
+    string? RazonNoModificable)
+{
+    public bool PuedeModificarse => RazonNoModificable is null;
 }

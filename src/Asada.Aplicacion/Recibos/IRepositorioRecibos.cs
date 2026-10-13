@@ -1,3 +1,4 @@
+using Asada.Aplicacion.Recibos.Dtos;
 using Asada.Dominio.Entidades;
 
 namespace Asada.Aplicacion.Recibos;
@@ -60,4 +61,12 @@ public interface IRepositorioRecibos
 
     /// <summary>Organizacion actual (datos del encabezado del recibo).</summary>
     Task<Organizacion?> ObtenerOrganizacionAsync(int organizacionId, CancellationToken ct = default);
+
+    /// <summary>Recibo (sin desglose) con seguimiento de cambios, para anularlo, y su periodo; o null.</summary>
+    Task<(Recibo Recibo, Periodo Periodo)?> ObtenerReciboParaModificarAsync(int reciboId, CancellationToken ct = default);
+
+    /// <summary>Recibos anulados del periodo, del mas reciente al mas antiguo.</summary>
+    Task<IReadOnlyList<ReciboAnuladoDto>> ListarAnuladosPeriodoAsync(int anio, int mes, CancellationToken ct = default);
+
+    Task GuardarCambiosAsync(CancellationToken ct = default);
 }

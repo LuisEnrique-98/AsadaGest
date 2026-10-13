@@ -1,0 +1,133 @@
+@page "/configuracion"
+@attribute [Authorize(Policy = Permisos.ConfigurarAsada)]
+@using System.ComponentModel.DataAnnotations
+
+@inject ObtenerConfiguracionCasoUso ObtenerConfiguracion
+@inject ActualizarConfiguracionCasoUso ActualizarConfiguracion
+@inject NavigationManager Navegacion
+
+<PageTitle>Configuracion de la ASADA</PageTitle>
+
+<h1>Configuracion de la ASADA</h1>
+
+@if (Ok == "1")
+{
+    <div class="alert alert-success">Configuracion guardada.</div>
+}
+
+@if (error is not null)
+{
+    <div class="alert alert-danger">@error</div>
+    return;
+}
+
+@if (datos is null || Modelo is null)
+{
+    <p><em>Cargando...</em></p>
+    return;
+}
+
+<p class="text-muted">@datos.Nombre &middot; codigo <strong>@datos.Codigo</strong> (forma parte de los numeros de abonado y de recibo; no se cambia).</p>
+
+<div class="row">
+    <div class="col-lg-7">
+        @* Sin <AntiforgeryToken />: el EditForm ya incluye el suyo. *@
+        <EditForm Model="Modelo" method="post" OnValidSubmit="GuardarAsync" FormName="configuracion-asada">
+            <DataAnnotationsValidator />
+            @if (errores.Count > 0)
+            {
+                <div class="alert alert-danger" role="alert">
+                    <ul class="mb-0">@foreach (var e in errores) { <li>@e</li> }</ul>
+                </div>
+            }
+
+            <h2 class="h5">Datos de contacto</h2>
+            <p class="text-muted small">Se muestran en el encabezado de los recibos, en pantalla y en el PDF.</p>
+
+            <div class="mb-3">
+                <label for="cedula" class="form-label">Cedula juridica</label>
+                <InputText id="cedula" class="form-control" @bind-Value="Modelo.CedulaJuridica" placeholder="3-101-123456" />
+            </div>
+            <div class="row">
+                <div class="col-md-5 mb-3">
+                    <label for="telefono" class="form-label">Telefono</label>
+                    <InputText id="telefono" class="form-control" @bind-Value="Modelo.Telefono" />
+                </div>
+                <div class="col-md-7 mb-3">
+                    <label for="correo" class="form-label">Correo</label>
+                    <InputText id="correo" class="form-control" @bind-Value="Modelo.Correo" />
+                </div>
+            </div>
+            <div class="mb-4">
+                <label for="direccion" class="form-label">Direccion</label>
+                <InputText id="direccion" class="form-control" @bind-Value="Modelo.Direccion" />
+            </div>
+
+            <h2 class="h5">Lecturas</h2>
+            <div class="mb-3">
+                <label for="umbral" class="form-label">Umbral de consumo anormal (%)</label>
+                <InputNumber id="umbral" class="form-control" style="max-width: 10rem" @bind-Value="Modelo.PorcentajeConsumoAnormal" />
+                <ValidationMessage For="() => Modelo.PorcentajeConsumoAnormal" />
+                <div class="form-text">
+                    Una lectura se marca para revision si su consumo supera el promedio de los ultimos
+                    @ReglasConsumoAnormal.PeriodosReferencia periodos en mas de este porcentaje. Por ejemplo, con 50 % y un
+                    promedio de 10 m³, se marca un consumo mayor a 15 m³. Solo afecta las lecturas que se registren o corrijan
+                    de ahora en adelante; nunca impide facturar.
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Guardar</button>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    [Parameter, SupplyParameterFromQuery(Name = "ok")] public string? Ok { get; set; }
+
+    private ConfiguracionDto? datos;
+    private string? error;
+    private List<string> errores = [];
+
+    [SupplyParameterFromForm(FormName = "configuracion-asada")]
+    private ModeloConfiguracion? Modelo { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var resultado = await ObtenerConfiguracion.EjecutarAsync();
+        datos = resultado.Valor;
+        error = resultado.EsExitoso ? null : string.Join(" ", resultado.Errores);
+        if (datos is null) return;
+
+        Modelo ??= new ModeloConfiguracion
+        {
+            CedulaJuridica = datos.CedulaJuridica,
+            Telefono = datos.Telefono,
+            Correo = datos.Correo,
+            Direccion = datos.Direccion,
+            PorcentajeConsumoAnormal = datos.PorcentajeConsumoAnormal,
+        };
+    }
+
+    private async Task GuardarAsync()
+    {
+        var resultado = await ActualizarConfiguracion.EjecutarAsync(new ActualizarConfiguracionSolicitud(
+            Modelo!.CedulaJuridica, Modelo.Telefono, Modelo.Correo, Modelo.Direccion, Modelo.PorcentajeConsumoAnormal ?? 0m));
+        if (resultado.EsExitoso)
+        {
+            Navegacion.NavigateTo("/configuracion?ok=1", forceLoad: true);
+            return;
+        }
+        errores = resultado.Errores.ToList();
+    }
+
+    private sealed class ModeloConfiguracion
+    {
+        public string? CedulaJuridica { get; set; }
+        public string? Telefono { get; set; }
+        public string? Correo { get; set; }
+        public string? Direccion { get; set; }
+
+        [Required(ErrorMessage = "Indique el umbral de consumo anormal.")]
+        public decimal? PorcentajeConsumoAnormal { get; set; }
+    }
+}

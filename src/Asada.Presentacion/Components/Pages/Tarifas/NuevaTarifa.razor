@@ -1,6 +1,5 @@
 @page "/tarifas/nueva/{CategoriaId:int}"
-@attribute [Authorize(Roles = "Administrador")]
-@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Policy = Permisos.GestionarTarifas)]
 @using Asada.Aplicacion.Common
 
 @inject ObtenerPanelTarifasCasoUso ObtenerPanel

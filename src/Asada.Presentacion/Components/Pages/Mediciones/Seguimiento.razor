@@ -1,6 +1,5 @@
 @page "/lecturas/seguimiento/{ServicioId:int}"
-@attribute [Authorize(Roles = "Administrador,Operador")]
-@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Policy = Permisos.RegistrarLecturas)]
 @using Asada.Aplicacion.Common
 
 @inject ObtenerLecturasPeriodoCasoUso ObtenerLecturas

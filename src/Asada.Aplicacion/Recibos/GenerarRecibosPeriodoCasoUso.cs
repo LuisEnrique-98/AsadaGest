@@ -11,10 +11,12 @@ namespace Asada.Aplicacion.Recibos;
 /// Se puede ejecutar varias veces sobre el mismo periodo: los servicios que ya tienen recibo se
 /// saltan, asi que una segunda corrida solo factura los que se pusieron al dia despues (lectura
 /// registrada tarde, categoria asignada, tarifa cargada). Todos los recibos de una corrida se
-/// guardan juntos o ninguno.
+/// guardan juntos o ninguno. Un servicio cuyo recibo se anulo vuelve a estar listo para facturar
+/// y recibe un recibo nuevo, con otro numero. No se generan recibos en un periodo cerrado.
 /// </summary>
 public class GenerarRecibosPeriodoCasoUso(
-    IRepositorioRecibos repositorio, IProveedorOrganizacion proveedorOrganizacion, IProveedorFecha fecha)
+    IRepositorioRecibos repositorio, IProveedorOrganizacion proveedorOrganizacion, IProveedorFecha fecha,
+    IProveedorUsuario usuario)
 {
     public async Task<Resultado<GeneracionRecibosDto>> EjecutarAsync(GenerarRecibosSolicitud s, CancellationToken ct = default)
     {
@@ -30,6 +32,9 @@ public class GenerarRecibosPeriodoCasoUso(
         var periodo = await repositorio.ObtenerPeriodoAsync(s.Anio, s.Mes, ct);
         if (periodo is null)
             return Resultado<GeneracionRecibosDto>.Falla("El periodo no tiene lecturas registradas; no hay nada que facturar.");
+        if (periodo.EstaCerrado)
+            return Resultado<GeneracionRecibosDto>.Falla(
+                $"El periodo {s.Mes:00}/{s.Anio} esta cerrado; no se pueden generar recibos. Un Administrador debe reabrirlo primero.");
 
         var servicios = await repositorio.ListarServiciosDelPeriodoAsync(s.Anio, s.Mes, ct);
         var tarifas = await repositorio.ListarTarifasAsync(ct);
@@ -88,6 +93,8 @@ public class GenerarRecibosPeriodoCasoUso(
         SubtotalAgua = desglose.SubtotalAgua,
         MontoHidrante = desglose.MontoHidrante,
         Total = desglose.Total,
+        GeneradoPorUsuarioId = usuario.UsuarioId,
+        GeneradoPorNombre = usuario.Nombre,
         Detalles = desglose.Lineas.Select((l, i) => new ReciboDetalle
         {
             Orden = i + 1,

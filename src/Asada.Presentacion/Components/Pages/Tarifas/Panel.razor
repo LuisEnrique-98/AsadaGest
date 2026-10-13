@@ -1,6 +1,5 @@
 @page "/tarifas"
-@attribute [Authorize]
-@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Policy = Permisos.Consultar)]
 
 @inject ObtenerPanelTarifasCasoUso ObtenerPanel
 @inject CrearCategoriaCasoUso CrearCategoria
@@ -62,7 +61,7 @@ else if (Ok == "tarifa")
                     }
                     <small class="text-muted">@fila.Categoria.CantidadServicios servicio(s) activo(s)</small>
                 </div>
-                <AuthorizeView Roles="Administrador" Context="permiso">
+                <AuthorizeView Policy="@Permisos.GestionarTarifas" Context="permiso">
                     @if (fila.Categoria.Estado == EstadoRegistro.Activo)
                     {
                         <a class="btn btn-sm btn-primary" href="tarifas/nueva/@(fila.Categoria.Id)">Nueva version de tarifa</a>
@@ -121,7 +120,7 @@ else if (Ok == "tarifa")
     </div>
 }
 
-<AuthorizeView Roles="Administrador" Context="permiso">
+<AuthorizeView Policy="@Permisos.GestionarTarifas" Context="permiso">
     <div class="row mt-4">
         <div class="col-lg-6">
             <h2 class="h5">Nueva categoria</h2>

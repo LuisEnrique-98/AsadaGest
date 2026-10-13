@@ -1,6 +1,5 @@
 @page "/servicios/{ServicioId:int}/categoria"
-@attribute [Authorize(Roles = "Administrador,Operador")]
-@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Policy = Permisos.AsignarCategoria)]
 
 @inject ObtenerCategoriaServicioCasoUso ObtenerDatos
 @inject AsignarCategoriaServicioCasoUso Asignar
@@ -35,7 +34,7 @@
 {
     <div class="alert alert-warning">
         La ASADA todavia no tiene categorias tarifarias.
-        <AuthorizeView Roles="Administrador" Context="permiso"><a href="tarifas">Cree una en Tarifas.</a></AuthorizeView>
+        <AuthorizeView Policy="@Permisos.GestionarTarifas" Context="permiso"><a href="tarifas">Cree una en Tarifas.</a></AuthorizeView>
     </div>
     return;
 }

@@ -1,7 +1,6 @@
 ﻿@page "/abonados/nuevo"
-@attribute [Authorize(Roles = "Administrador,Operador")]
+@attribute [Authorize(Policy = Permisos.EditarAbonados)]
 @using System.ComponentModel.DataAnnotations
-@using Microsoft.AspNetCore.Authorization
 
 @inject CrearAbonadoCasoUso CrearAbonado
 @inject NavigationManager Navegacion

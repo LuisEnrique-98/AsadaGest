@@ -28,3 +28,12 @@ public sealed record RegistrarSeguimientoLecturaSolicitud(
     int Mes,
     DecisionSeguimientoLectura Decision,
     string? Nota);
+
+public sealed record CorregirLecturaSolicitud(
+    int MedicionId,
+    DateOnly FechaLectura,
+    decimal Lectura,
+    string? Observaciones,
+    string Motivo);
+
+public sealed record AnularLecturaSolicitud(int MedicionId, string Motivo);

@@ -1,5 +1,6 @@
 using Asada.Aplicacion.Common;
 using Asada.Aplicacion.Mediciones.Dtos;
+using Asada.Dominio.Enums;
 using Asada.Dominio.Reglas;
 
 namespace Asada.Aplicacion.Mediciones;
@@ -16,12 +17,14 @@ public class ObtenerLecturasPeriodoCasoUso(IRepositorioMediciones repositorio, I
             return Resultado<LecturasPeriodoDto>.Falla("El periodo indicado no es valido.");
 
         var filas = await repositorio.ListarFilasDelPeriodoAsync(anio, mes, ct);
+        var periodo = await repositorio.ObtenerPeriodoAsync(anio, mes, ct);
 
         return Resultado<LecturasPeriodoDto>.Ok(new LecturasPeriodoDto(
             anio, mes,
             ReglasPeriodo.InicioVentana(anio, mes),
             ReglasPeriodo.FinVentana(anio, mes),
             ReglasPeriodo.EstadoVentana(anio, mes, fecha.Hoy),
-            filas));
+            filas,
+            periodo?.Estado ?? EstadoPeriodo.Abierto));
     }
 }

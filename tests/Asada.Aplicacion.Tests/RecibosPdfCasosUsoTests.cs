@@ -38,7 +38,7 @@ public class RecibosPdfCasosUsoTests
     private async Task GenerarOctubreAsync(params ServicioAFacturar[] servicios)
     {
         repo.Servicios.AddRange(servicios);
-        var r = await new GenerarRecibosPeriodoCasoUso(repo, org, new ProveedorFechaFalso(new DateOnly(2026, 10, 30)))
+        var r = await new GenerarRecibosPeriodoCasoUso(repo, org, new ProveedorFechaFalso(new DateOnly(2026, 10, 30)), new ProveedorUsuarioFalso())
             .EjecutarAsync(new GenerarRecibosSolicitud(2026, 10, new DateOnly(2026, 11, 15)));
         Assert.True(r.EsExitoso);
     }
