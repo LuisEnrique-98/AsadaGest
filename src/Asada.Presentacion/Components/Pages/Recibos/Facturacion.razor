@@ -69,6 +69,13 @@ else if (Ok == "ninguno")
         <p class="mb-0 text-muted">
             Pendientes: @datos.SinLectura sin lectura &middot; @datos.SinCategoria sin categoria &middot; @datos.SinTarifa sin tarifa vigente
         </p>
+        @if (datos.ConRecibo > 0)
+        {
+            <a class="btn btn-outline-primary btn-sm mt-3" href="recibos/pdf?anio=@(datos.Anio)&mes=@(datos.Mes)" target="_blank">
+                Imprimir los @datos.ConRecibo recibo(s) del periodo (PDF)
+            </a>
+            <div class="form-text">Dos recibos por hoja carta, ordenados por nombre del abonado. Se corta por la linea punteada.</div>
+        }
     </div>
 </div>
 
@@ -172,6 +179,7 @@ else if (Ok == "ninguno")
                         @if (f.ReciboId is int id)
                         {
                             <a href="recibos/@id">@f.ReciboNumero</a>
+                            <a href="recibos/@(id)/pdf" target="_blank" class="small ms-1" title="Abrir el PDF de este recibo">PDF</a>
                         }
                     </td>
                     <td class="text-end">@(f.Total is decimal t ? Etiquetas.Colones(t) : "")</td>

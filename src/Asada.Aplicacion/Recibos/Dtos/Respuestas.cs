@@ -78,3 +78,9 @@ public sealed record ReciboDto(
     decimal SubtotalAgua,
     decimal MontoHidrante,
     decimal Total);
+
+/// <summary>Archivo para descargar desde el navegador (p. ej. el PDF de los recibos).</summary>
+public sealed record ArchivoDescarga(string NombreArchivo, string TipoContenido, byte[] Contenido)
+{
+    public static ArchivoDescarga Pdf(string nombreArchivo, byte[] contenido) => new(nombreArchivo, "application/pdf", contenido);
+}
