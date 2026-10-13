@@ -55,6 +55,9 @@ public interface IRepositorioRecibos
     /// <summary>Recibo con su desglose y su periodo, o null.</summary>
     Task<(Recibo Recibo, Periodo Periodo)?> ObtenerReciboAsync(int reciboId, CancellationToken ct = default);
 
+    /// <summary>Recibos del periodo (en cualquier estado) con su desglose. Sin orden garantizado.</summary>
+    Task<IReadOnlyList<Recibo>> ListarRecibosPeriodoAsync(int anio, int mes, CancellationToken ct = default);
+
     /// <summary>Organizacion actual (datos del encabezado del recibo).</summary>
     Task<Organizacion?> ObtenerOrganizacionAsync(int organizacionId, CancellationToken ct = default);
 }

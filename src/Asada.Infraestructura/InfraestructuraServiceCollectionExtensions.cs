@@ -3,6 +3,7 @@ using Asada.Aplicacion.Common;
 using Asada.Aplicacion.Mediciones;
 using Asada.Aplicacion.Recibos;
 using Asada.Aplicacion.Tarifas;
+using Asada.Infraestructura.Documentos;
 using Asada.Infraestructura.Identidad;
 using Asada.Infraestructura.Persistence;
 using Asada.Infraestructura.Persistence.Repositorios;
@@ -40,6 +41,7 @@ public static class InfraestructuraServiceCollectionExtensions
         servicios.AddScoped<IRepositorioTarifas, RepositorioTarifas>();
         servicios.AddScoped<IRepositorioRecibos, RepositorioRecibos>();
         servicios.AddSingleton<IProveedorFecha, ProveedorFecha>();
+        servicios.AddSingleton<IGeneradorPdfRecibos, GeneradorPdfRecibos>();
 
         servicios
             .AddIdentity<Usuario, Rol>(opciones =>
