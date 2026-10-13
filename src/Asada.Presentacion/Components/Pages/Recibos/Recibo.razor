@@ -1,0 +1,121 @@
+@page "/recibos/{ReciboId:int}"
+@attribute [Authorize]
+@using Microsoft.AspNetCore.Authorization
+
+@inject ObtenerReciboCasoUso ObtenerRecibo
+
+<PageTitle>@(recibo?.Numero ?? "Recibo")</PageTitle>
+
+<HeadContent>
+    <style>
+        @@media print {
+            .sidebar, .top-row, .no-imprimir { display: none !important; }
+            main, article { padding: 0 !important; margin: 0 !important; }
+        }
+    </style>
+</HeadContent>
+
+@if (cargado && recibo is null)
+{
+    <div class="alert alert-warning">El recibo no existe o no pertenece a su ASADA.</div>
+    return;
+}
+
+@if (recibo is null)
+{
+    <p><em>Cargando...</em></p>
+    return;
+}
+
+<div class="no-imprimir d-flex flex-wrap gap-2 mb-3">
+    <a class="btn btn-link ps-0" href="recibos?anio=@(recibo.Anio)&mes=@(recibo.Mes)">&larr; Volver a recibos del periodo</a>
+    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="window.print()">Imprimir</button>
+</div>
+
+@if (recibo.LecturaRequiereRevision)
+{
+    <div class="alert alert-warning no-imprimir">
+        <strong>Lectura marcada para revision:</strong> @recibo.MotivosRevision.
+        El recibo se emitio con el consumo registrado.
+    </div>
+}
+
+<div class="card" style="max-width: 48rem">
+    <div class="card-body">
+        <div class="d-flex flex-wrap justify-content-between gap-3 border-bottom pb-3 mb-3">
+            <div>
+                <h1 class="h4 mb-1">@recibo.OrganizacionNombre</h1>
+                @if (recibo.OrganizacionCedulaJuridica is not null) { <div class="small">Cedula juridica @recibo.OrganizacionCedulaJuridica</div> }
+                @if (recibo.OrganizacionTelefono is not null) { <div class="small">Tel. @recibo.OrganizacionTelefono</div> }
+                @if (recibo.OrganizacionCorreo is not null) { <div class="small">@recibo.OrganizacionCorreo</div> }
+            </div>
+            <div class="text-end">
+                <div class="h5 mb-1">Recibo @recibo.Numero</div>
+                <div class="small">Periodo: @Etiquetas.Periodo(recibo.Anio, recibo.Mes)</div>
+                <div class="small">Emitido: @Etiquetas.Fecha(recibo.FechaEmision)</div>
+                <div class="small fw-bold">Vence: @Etiquetas.Fecha(recibo.FechaVencimiento)</div>
+                @if (recibo.Estado != EstadoRecibo.Emitido)
+                {
+                    <span class="badge bg-danger">@Etiquetas.De(recibo.Estado)</span>
+                }
+            </div>
+        </div>
+
+        <div class="row mb-3">
+            <div class="col-sm-7">
+                <div class="fw-bold">@recibo.AbonadoNombre</div>
+                <div class="small">Abonado @recibo.AbonadoCodigo &middot; Servicio #@recibo.ServicioId</div>
+                <div class="small">@recibo.PropiedadDireccion</div>
+                <div class="small">Categoria: @recibo.CategoriaNombre</div>
+            </div>
+            <div class="col-sm-5 small">
+                <div>Medidor: @recibo.NumeroSerieMedidor</div>
+                <div>Lectura anterior: @(recibo.LecturaAnterior is decimal la ? Etiquetas.Metros(la) : "—")</div>
+                <div>Lectura actual: @Etiquetas.Metros(recibo.LecturaActual) (@Etiquetas.Fecha(recibo.FechaLectura))</div>
+                <div class="fw-bold">Consumo: @Etiquetas.Metros(recibo.Consumo)</div>
+                @if (recibo.HuboCambioMedidor)
+                {
+                    <div class="text-muted">Incluye cambio de medidor en el periodo.</div>
+                }
+            </div>
+        </div>
+
+        <table class="table table-sm mb-0">
+            <thead>
+                <tr><th>Concepto</th><th class="text-end">m³</th><th class="text-end">Precio</th><th class="text-end">Monto</th></tr>
+            </thead>
+            <tbody>
+                @foreach (var l in recibo.Lineas)
+                {
+                    <tr>
+                        <td>@l.Concepto</td>
+                        <td class="text-end">@(l.Cantidad is decimal c ? c.ToString("0.###") : "")</td>
+                        <td class="text-end">@(l.PrecioUnitario is decimal p ? Etiquetas.Precio(p) : "")</td>
+                        <td class="text-end">@Etiquetas.Colones(l.Monto)</td>
+                    </tr>
+                }
+            </tbody>
+            <tfoot>
+                @if (recibo.MontoHidrante > 0)
+                {
+                    <tr><td colspan="3">Subtotal agua</td><td class="text-end">@Etiquetas.Colones(recibo.SubtotalAgua)</td></tr>
+                    <tr><td colspan="3">Hidrantes</td><td class="text-end">@Etiquetas.Colones(recibo.MontoHidrante)</td></tr>
+                }
+                <tr class="fw-bold fs-5"><td colspan="3">Total a pagar</td><td class="text-end">@Etiquetas.Colones(recibo.Total)</td></tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+
+@code {
+    [Parameter] public int ReciboId { get; set; }
+
+    private ReciboDto? recibo;
+    private bool cargado;
+
+    protected override async Task OnInitializedAsync()
+    {
+        recibo = (await ObtenerRecibo.EjecutarAsync(ReciboId)).Valor;
+        cargado = true;
+    }
+}

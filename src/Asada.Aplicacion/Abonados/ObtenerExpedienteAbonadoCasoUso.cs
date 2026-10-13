@@ -25,7 +25,7 @@ public class ObtenerExpedienteAbonadoCasoUso(IRepositorioAbonados repositorio)
                     .OrderBy(s => s.Id)
                     .Select(s => new ServicioDto(
                         s.Id, s.FechaInicio, s.Estado, s.Observaciones,
-                        s.EsMoroso, s.MensualidadesPendientes, s.MontoPendiente))
+                        s.EsMoroso, s.MensualidadesPendientes, s.MontoPendiente, s.Categoria?.Nombre))
                     .ToList()))
             .ToList());
 }
