@@ -1,6 +1,5 @@
 @page "/recibos"
-@attribute [Authorize]
-@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Policy = Permisos.Consultar)]
 @using Asada.Aplicacion.Common
 
 @inject ObtenerFacturacionPeriodoCasoUso ObtenerFacturacion
@@ -61,13 +60,20 @@ else if (Ok == "ninguno")
 
 <div class="card mb-3">
     <div class="card-body">
-        <h2 class="h5 mb-2">Facturacion de @Etiquetas.Periodo(datos.Anio, datos.Mes)</h2>
+        <h2 class="h5 mb-2">
+            Facturacion de @Etiquetas.Periodo(datos.Anio, datos.Mes)
+            <span class="badge @Etiquetas.ClasePeriodo(datos.EstadoPeriodo) ms-2">Periodo @Etiquetas.De(datos.EstadoPeriodo).ToLower()</span>
+        </h2>
         <p class="mb-1">
             @datos.Total servicio(s) &middot; <strong>@datos.ConRecibo con recibo</strong> (@Etiquetas.Colones(datos.MontoEmitido))
             &middot; @datos.Listos listo(s) para facturar
         </p>
         <p class="mb-0 text-muted">
             Pendientes: @datos.SinLectura sin lectura &middot; @datos.SinCategoria sin categoria &middot; @datos.SinTarifa sin tarifa vigente
+            @if (datos.Anulados.Count > 0)
+            {
+                <span>@($" · {datos.Anulados.Count} anulado(s)")</span>
+            }
         </p>
         @if (datos.ConRecibo > 0)
         {
@@ -79,6 +85,14 @@ else if (Ok == "ninguno")
     </div>
 </div>
 
+@if (datos.PeriodoCerrado)
+{
+    <div class="alert alert-secondary" role="alert">
+        Este periodo esta <strong>cerrado</strong>: no se pueden generar ni anular recibos.
+        Un Administrador lo puede reabrir desde <a href="periodos?anio=@(datos.Anio)&mes=@(datos.Mes)">Periodos</a>.
+    </div>
+}
+
 @if (datos.SinCategoria > 0 || datos.SinTarifa > 0)
 {
     <div class="alert alert-warning">
@@ -88,9 +102,9 @@ else if (Ok == "ninguno")
     </div>
 }
 
-@if (datos.Listos > 0)
+@if (datos.Listos > 0 && !datos.PeriodoCerrado)
 {
-    <AuthorizeView Roles="Administrador,Operador" Context="permiso">
+    <AuthorizeView Policy="@Permisos.GenerarRecibos" Context="permiso">
         <div class="card border-primary mb-3">
             <div class="card-body">
                 <h2 class="h5">Generar recibos</h2>
@@ -102,8 +116,9 @@ else if (Ok == "ninguno")
                     }
                 </p>
                 <p class="text-muted small mb-2">
-                    Revise las lecturas antes de generar: la anulacion de recibos todavia no esta disponible.
-                    Los servicios sin lectura no se facturan; puede volver a generar despues y solo se facturan los nuevos.
+                    Revise las lecturas antes de generar. Si un recibo sale mal, un Administrador lo puede anular y se genera
+                    uno nuevo con otro numero. Los servicios sin lectura no se facturan; puede volver a generar despues y solo
+                    se facturan los nuevos.
                 </p>
 
                 @* Sin <AntiforgeryToken />: el EditForm ya incluye el suyo. El periodo viaja en la URL (anio, mes). *@
@@ -188,6 +203,30 @@ else if (Ok == "ninguno")
         </tbody>
     </table>
 </div>
+
+@if (datos.Anulados.Count > 0)
+{
+    <h2 class="h5 mt-4">Recibos anulados</h2>
+    <div class="table-responsive">
+        <table class="table table-sm align-middle">
+            <thead>
+                <tr><th>Recibo</th><th>Abonado</th><th class="text-end">Total</th><th>Anulado</th><th>Motivo</th></tr>
+            </thead>
+            <tbody>
+                @foreach (var a in datos.Anulados)
+                {
+                    <tr class="text-muted">
+                        <td><a href="recibos/@a.Id">@a.Numero</a></td>
+                        <td>@a.AbonadoCodigo<br /><small>@a.AbonadoNombre</small></td>
+                        <td class="text-end"><s>@Etiquetas.Colones(a.Total)</s></td>
+                        <td>@(a.FechaAnulacion is DateTime f ? Etiquetas.FechaHora(f) : "")<br /><small>@a.AnuladoPorNombre</small></td>
+                        <td>@a.MotivoAnulacion</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
 
 @code {
     [Parameter, SupplyParameterFromQuery(Name = "anio")] public int? Anio { get; set; }

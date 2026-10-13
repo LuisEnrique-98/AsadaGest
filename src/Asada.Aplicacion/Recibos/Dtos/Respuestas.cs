@@ -31,8 +31,17 @@ public sealed record FilaFacturacionDto(
     string? ReciboNumero,
     decimal? Total);
 
-public sealed record FacturacionPeriodoDto(int Anio, int Mes, IReadOnlyList<FilaFacturacionDto> Filas)
+/// <summary>Recibo anulado de un periodo (se lista aparte en la pantalla de facturacion).</summary>
+public sealed record ReciboAnuladoDto(
+    int Id, string Numero, string AbonadoCodigo, string AbonadoNombre, decimal Total,
+    DateTime? FechaAnulacion, string? AnuladoPorNombre, string? MotivoAnulacion);
+
+public sealed record FacturacionPeriodoDto(
+    int Anio, int Mes, IReadOnlyList<FilaFacturacionDto> Filas,
+    EstadoPeriodo EstadoPeriodo, IReadOnlyList<ReciboAnuladoDto> Anulados)
 {
+    public bool PeriodoCerrado => EstadoPeriodo == EstadoPeriodo.Cerrado;
+
     public int Total => Filas.Count;
     public int ConRecibo => Filas.Count(f => f.Estado == EstadoFacturacion.ConRecibo);
     public int Listos => Filas.Count(f => f.Estado == EstadoFacturacion.ListoParaFacturar);
@@ -77,7 +86,17 @@ public sealed record ReciboDto(
     IReadOnlyList<LineaReciboDto> Lineas,
     decimal SubtotalAgua,
     decimal MontoHidrante,
-    decimal Total);
+    decimal Total,
+    // Sprint 5: quien lo genero, anulacion y estado del periodo.
+    string? GeneradoPorNombre,
+    DateTime? FechaAnulacion,
+    string? AnuladoPorNombre,
+    string? MotivoAnulacion,
+    EstadoPeriodo EstadoPeriodo)
+{
+    public bool EstaAnulado => Estado == EstadoRecibo.Anulado;
+    public bool PeriodoCerrado => EstadoPeriodo == EstadoPeriodo.Cerrado;
+}
 
 /// <summary>Archivo para descargar desde el navegador (p. ej. el PDF de los recibos).</summary>
 public sealed record ArchivoDescarga(string NombreArchivo, string TipoContenido, byte[] Contenido)

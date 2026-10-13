@@ -22,6 +22,11 @@ public class ReciboConfiguracion : IEntityTypeConfiguration<Recibo>
         builder.Property(r => r.NumeroSerieMedidor).HasMaxLength(50).IsRequired();
         builder.Property(r => r.MotivosRevision).HasMaxLength(800);
 
+        // Sprint 5: quien lo genero y anulacion.
+        builder.Property(r => r.GeneradoPorNombre).HasMaxLength(150);
+        builder.Property(r => r.AnuladoPorNombre).HasMaxLength(150);
+        builder.Property(r => r.MotivoAnulacion).HasMaxLength(400);
+
         builder.Property(r => r.LecturaAnterior).HasPrecision(12, 3);
         builder.Property(r => r.LecturaActual).HasPrecision(12, 3);
         builder.Property(r => r.Consumo).HasPrecision(12, 3);
@@ -29,8 +34,8 @@ public class ReciboConfiguracion : IEntityTypeConfiguration<Recibo>
         builder.Property(r => r.MontoHidrante).HasPrecision(12, 2);
         builder.Property(r => r.Total).HasPrecision(12, 2);
 
-        // Un solo recibo emitido por servicio y periodo. El indice es filtrado para que, cuando
-        // exista la anulacion (Sprint 5), un recibo anulado no impida emitir el que lo reemplaza.
+        // Un solo recibo emitido por servicio y periodo. El indice es filtrado para que un recibo
+        // anulado no impida emitir el que lo reemplaza.
         // Es tambien lo que detecta a dos usuarios generando el mismo periodo a la vez.
         builder.HasIndex(r => new { r.ServicioId, r.PeriodoId })
             .IsUnique()

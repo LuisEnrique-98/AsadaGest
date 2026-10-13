@@ -1,6 +1,5 @@
 @page "/tarifas/{TarifaId:int}"
-@attribute [Authorize]
-@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Policy = Permisos.Consultar)]
 
 @inject ObtenerTarifaCasoUso ObtenerTarifa
 @inject SimularReciboCasoUso Simular

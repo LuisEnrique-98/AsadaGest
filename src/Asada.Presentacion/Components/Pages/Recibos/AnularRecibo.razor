@@ -1,0 +1,117 @@
+@page "/recibos/{ReciboId:int}/anular"
+@attribute [Authorize(Policy = Permisos.AnularRecibos)]
+
+@inject ObtenerReciboCasoUso ObtenerRecibo
+@inject AnularReciboCasoUso AnularReciboUso
+@inject NavigationManager Navegacion
+
+<PageTitle>Anular recibo</PageTitle>
+
+@if (cargado && recibo is null)
+{
+    <p><a href="recibos">&larr; Volver a recibos</a></p>
+    <div class="alert alert-warning">El recibo no existe o no pertenece a su ASADA.</div>
+    return;
+}
+
+@if (recibo is null || Modelo is null)
+{
+    <p><em>Cargando...</em></p>
+    return;
+}
+
+<p><a href="recibos/@recibo.Id">&larr; Volver al recibo @recibo.Numero</a></p>
+
+<h1>Anular recibo @recibo.Numero</h1>
+
+<div class="card mb-3" style="max-width: 48rem">
+    <div class="card-body">
+        <p class="mb-1"><strong>@recibo.AbonadoCodigo</strong> &middot; @recibo.AbonadoNombre</p>
+        <p class="mb-1">@recibo.PropiedadDireccion</p>
+        <p class="mb-0">
+            Periodo @Etiquetas.Periodo(recibo.Anio, recibo.Mes) &middot; consumo @Etiquetas.Metros(recibo.Consumo)
+            &middot; total <strong>@Etiquetas.Colones(recibo.Total)</strong>
+        </p>
+    </div>
+</div>
+
+@if (recibo.EstaAnulado)
+{
+    <div class="alert alert-info">Este recibo ya esta anulado.</div>
+    return;
+}
+
+@if (recibo.PeriodoCerrado)
+{
+    <div class="alert alert-warning">
+        El periodo @Etiquetas.Periodo(recibo.Anio, recibo.Mes) esta cerrado; no se pueden anular sus recibos.
+        <a href="periodos?anio=@(recibo.Anio)&mes=@(recibo.Mes)">Reabra el periodo</a> primero.
+    </div>
+    return;
+}
+
+<div class="row">
+    <div class="col-lg-7">
+        <div class="alert alert-secondary small">
+            El recibo no se borra: conserva su numero, se imprime marcado ANULADO y queda en la auditoria.
+            Despues de anularlo, el servicio vuelve a estar listo para facturar en este periodo: si la lectura estaba mal,
+            corrijala y genere el recibo nuevo (tendra otro numero).
+        </div>
+
+        @* Sin <AntiforgeryToken />: el EditForm ya incluye el suyo. *@
+        <EditForm Model="Modelo" method="post" OnValidSubmit="AnularAsync" FormName="anular-recibo">
+            @if (errores.Count > 0)
+            {
+                <div class="alert alert-danger" role="alert">
+                    <ul class="mb-0">@foreach (var e in errores) { <li>@e</li> }</ul>
+                </div>
+            }
+
+            <div class="mb-3">
+                <label for="motivo" class="form-label">Motivo de la anulacion</label>
+                <InputTextArea id="motivo" class="form-control" rows="3" @bind-Value="Modelo.Motivo" />
+                <div class="form-text">Obligatorio (al menos @ReglasMotivo.LargoMinimo caracteres). Queda guardado en el recibo y en la auditoria.</div>
+            </div>
+
+            <button type="submit" class="btn btn-danger"
+                    onclick="return confirm('¿Anular el recibo? Esta accion no se puede deshacer.')">
+                Anular recibo
+            </button>
+            <a class="btn btn-link" href="recibos/@recibo.Id">Cancelar</a>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    [Parameter] public int ReciboId { get; set; }
+
+    private ReciboDto? recibo;
+    private bool cargado;
+    private List<string> errores = [];
+
+    [SupplyParameterFromForm(FormName = "anular-recibo")]
+    private ModeloAnular? Modelo { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        recibo = (await ObtenerRecibo.EjecutarAsync(ReciboId)).Valor;
+        cargado = true;
+        Modelo ??= new ModeloAnular();
+    }
+
+    private async Task AnularAsync()
+    {
+        var resultado = await AnularReciboUso.EjecutarAsync(new AnularReciboSolicitud(ReciboId, Modelo!.Motivo ?? ""));
+        if (resultado.EsExitoso)
+        {
+            Navegacion.NavigateTo($"/recibos/{ReciboId}?ok=anulado", forceLoad: true);
+            return;
+        }
+        errores = resultado.Errores.ToList();
+    }
+
+    private sealed class ModeloAnular
+    {
+        public string? Motivo { get; set; }
+    }
+}

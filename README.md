@@ -227,6 +227,42 @@ dotnet run --project src/Asada.Presentacion
 Los tramos del formulario de tarifa se reciben como texto a proposito: el navegador envia vacias las filas sin
 usar y un `decimal?` vacio dentro de una lista hace que el enlace de Blazor descarte la fila completa.
 
+## Sprint 4 -- Recibos en PDF
+
+`/recibos/{id}/pdf` y `/recibos/pdf?anio=&mes=`: media carta con talon, dos recibos por hoja carta (QuestPDF).
+
+## Sprint 5a -- Seguridad, auditoria y cierre de periodo
+
+Decisiones del 13 de octubre de 2026: anular recibos, corregir o anular lecturas y cerrar o reabrir periodos es
+solo del Administrador, siempre con motivo.
+
+- **Matriz de permisos** (`Seguridad/Permisos.cs`, pagina `/permisos`): cada accion sensible es una politica con
+  nombre (`[Authorize(Policy = Permisos.AnularRecibos)]`); las paginas ya no escriben nombres de rol.
+- **Auditoria automatica** (`/auditoria`, solo Administrador): un interceptor de EF Core (`InterceptorAuditoria`)
+  anota cada alta o cambio de abonados, servicios, medidores, lecturas, periodos, tarifas, recibos y datos de la
+  ASADA: quien, cuando y que campos (antes -> despues). Tabla `auditoria`, filtrada por organizacion.
+- **Quien hizo que**: cada lectura guarda quien la registro y cada recibo quien lo genero.
+- **Anular un recibo** (`/recibos/{id}/anular`): queda con su numero, marcado ANULADO, y el servicio vuelve a estar
+  listo para facturar (el recibo nuevo tiene otro numero).
+- **Corregir o anular una lectura** (`/lecturas/{id}/corregir`): solo la ultima lectura del servicio, sin recibo
+  emitido (anule primero el recibo) y en periodo abierto. La anulada no se borra y deja libre el periodo.
+- **Cierre de periodo** (`/periodos`): despues de la ventana de lectura y sin servicios con lectura pero sin recibo.
+  Cerrado bloquea lecturas, correcciones, generacion y anulacion de recibos. Reabrir pide motivo.
+- **Configuracion** (`/configuracion`): datos de contacto de la ASADA (se imprimen en el recibo) y umbral de consumo
+  anormal por ASADA (antes fijo en 50 %).
+
+Pasos (la migracion la genera usted; revise que `estado` de `mediciones` tenga `defaultValue: "Vigente"` y
+`porcentaje_consumo_anormal` tenga `defaultValue: 50m`, para que los datos existentes queden bien):
+
+```bash
+dotnet build
+dotnet test
+dotnet ef migrations add Sprint5aSeguridadAuditoria \
+  --project src/Asada.Infraestructura \
+  --startup-project src/Asada.Presentacion
+dotnet run --project src/Asada.Presentacion
+```
+
 ## Siguiente paso
 
-Sprint 4 -- Recibos en PDF/DOCX y generacion masiva para imprimir.
+Sprint 5b -- Gestion de usuarios de la ASADA (crear operadores, roles, contrasenas, bloqueo) y respaldos.

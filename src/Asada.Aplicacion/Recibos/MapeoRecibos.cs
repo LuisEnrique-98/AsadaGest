@@ -15,5 +15,6 @@ internal static class MapeoRecibos
         r.Detalles.OrderBy(d => d.Orden)
             .Select(d => new LineaReciboDto(d.Tipo, d.Concepto, d.Cantidad, d.PrecioUnitario, d.Monto))
             .ToList(),
-        r.SubtotalAgua, r.MontoHidrante, r.Total);
+        r.SubtotalAgua, r.MontoHidrante, r.Total,
+        r.GeneradoPorNombre, r.FechaAnulacion, r.AnuladoPorNombre, r.MotivoAnulacion, periodo.Estado);
 }

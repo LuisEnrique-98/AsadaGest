@@ -1,0 +1,173 @@
+@page "/auditoria"
+@attribute [Authorize(Policy = Permisos.VerAuditoria)]
+@using Asada.Aplicacion.Common
+
+@inject BuscarAuditoriaCasoUso BuscarAuditoria
+
+<PageTitle>Auditoria</PageTitle>
+
+<h1>Auditoria</h1>
+<p class="text-muted">
+    Cada alta o cambio en abonados, servicios, medidores, lecturas, periodos, tarifas, recibos y datos de la ASADA queda
+    anotado aqui: quien, cuando y que cambio. Los registros no se pueden modificar ni borrar.
+</p>
+
+@* Filtros con un formulario GET: la pagina es SSR y los filtros viajan en la URL. *@
+<form method="get" action="auditoria" class="row g-2 align-items-end mb-3">
+    <div class="col-sm-6 col-md-auto">
+        <label for="desde" class="form-label">Desde</label>
+        <input id="desde" name="desde" type="date" class="form-control" value="@Desde" />
+    </div>
+    <div class="col-sm-6 col-md-auto">
+        <label for="hasta" class="form-label">Hasta</label>
+        <input id="hasta" name="hasta" type="date" class="form-control" value="@Hasta" />
+    </div>
+    <div class="col-sm-6 col-md-auto">
+        <label for="entidad" class="form-label">Tipo de registro</label>
+        <select id="entidad" name="entidad" class="form-select">
+            <option value="">Todos</option>
+            @foreach (var e in BuscarAuditoriaCasoUso.Entidades)
+            {
+                <option value="@e" selected="@(e == Entidad)">@Etiquetas.Entidad(e)</option>
+            }
+        </select>
+    </div>
+    <div class="col-sm-6 col-md-auto">
+        <label for="id" class="form-label">Numero interno</label>
+        <input id="id" name="id" type="number" min="1" class="form-control" value="@Id" style="max-width: 9rem" />
+    </div>
+    <div class="col-sm-6 col-md-auto">
+        <label for="usuario" class="form-label">Usuario</label>
+        <input id="usuario" name="usuario" class="form-control" value="@Usuario" />
+    </div>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-outline-primary">Buscar</button>
+        <a class="btn btn-link" href="auditoria">Limpiar</a>
+    </div>
+</form>
+
+@if (error is not null)
+{
+    <div class="alert alert-danger">@error</div>
+    return;
+}
+
+@if (pagina is null)
+{
+    <p><em>Cargando...</em></p>
+    return;
+}
+
+@if (pagina.Total == 0)
+{
+    <div class="alert alert-info">No hay registros con esos filtros.</div>
+    return;
+}
+
+<p class="text-muted small">@pagina.Total registro(s). Fechas y horas de Costa Rica.</p>
+
+<div class="table-responsive">
+    <table class="table table-sm align-top">
+        <thead>
+            <tr>
+                <th class="text-nowrap">Fecha</th>
+                <th>Usuario</th>
+                <th>Accion</th>
+                <th>Registro</th>
+                <th>Cambios</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var r in pagina.Items)
+            {
+                <tr>
+                    <td class="text-nowrap">@Etiquetas.FechaHora(r.Fecha)</td>
+                    <td>@r.UsuarioNombre</td>
+                    <td><span class="badge @Etiquetas.ClaseAccion(r.Accion)">@Etiquetas.De(r.Accion)</span></td>
+                    <td class="text-nowrap">
+                        <a href="@EnlaceRegistro(r.Entidad, r.EntidadId)">@Etiquetas.Entidad(r.Entidad) #@r.EntidadId</a>
+                    </td>
+                    <td>
+                        @if (r.Accion == AccionAuditoria.Modificacion)
+                        {
+                            <ul class="list-unstyled small mb-0">
+                                @foreach (var c in r.Cambios)
+                                {
+                                    <li><strong>@Etiquetas.Campo(c.Campo):</strong> @(c.Antes ?? "(vacio)") &rarr; @(c.Despues ?? "(vacio)")</li>
+                                }
+                            </ul>
+                        }
+                        else
+                        {
+                            <details class="small">
+                                <summary>@r.Cambios.Count campo(s)</summary>
+                                <ul class="list-unstyled mb-0">
+                                    @foreach (var c in r.Cambios)
+                                    {
+                                        <li><strong>@Etiquetas.Campo(c.Campo):</strong> @(c.Despues ?? c.Antes)</li>
+                                    }
+                                </ul>
+                            </details>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@if (pagina.TotalPaginas > 1)
+{
+    <nav class="d-flex align-items-center gap-2">
+        @if (pagina.TieneAnterior) { <a class="btn btn-sm btn-outline-secondary" href="@EnlacePagina(pagina.Pagina - 1)">&larr; Anterior</a> }
+        <span class="small">Pagina @pagina.Pagina de @pagina.TotalPaginas</span>
+        @if (pagina.TieneSiguiente) { <a class="btn btn-sm btn-outline-secondary" href="@EnlacePagina(pagina.Pagina + 1)">Siguiente &rarr;</a> }
+    </nav>
+}
+
+@code {
+    [Parameter, SupplyParameterFromQuery(Name = "desde")] public string? Desde { get; set; }
+    [Parameter, SupplyParameterFromQuery(Name = "hasta")] public string? Hasta { get; set; }
+    [Parameter, SupplyParameterFromQuery(Name = "entidad")] public string? Entidad { get; set; }
+    [Parameter, SupplyParameterFromQuery(Name = "id")] public long? Id { get; set; }
+    [Parameter, SupplyParameterFromQuery(Name = "usuario")] public string? Usuario { get; set; }
+    [Parameter, SupplyParameterFromQuery(Name = "pagina")] public int? Pagina { get; set; }
+
+    private PaginaResultado<RegistroAuditoriaDto>? pagina;
+    private string? error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var filtro = new FiltroAuditoria(
+            DateOnly.TryParse(Desde, out var d) ? d : null,
+            DateOnly.TryParse(Hasta, out var h) ? h : null,
+            string.IsNullOrWhiteSpace(Entidad) ? null : Entidad,
+            Id,
+            Usuario);
+
+        var resultado = await BuscarAuditoria.EjecutarAsync(filtro, Pagina ?? 1);
+        pagina = resultado.Valor;
+        error = resultado.EsExitoso ? null : string.Join(" ", resultado.Errores);
+    }
+
+    private string EnlacePagina(int numero)
+    {
+        var partes = new List<string> { $"pagina={numero}" };
+        if (!string.IsNullOrWhiteSpace(Desde)) partes.Add($"desde={Uri.EscapeDataString(Desde)}");
+        if (!string.IsNullOrWhiteSpace(Hasta)) partes.Add($"hasta={Uri.EscapeDataString(Hasta)}");
+        if (!string.IsNullOrWhiteSpace(Entidad)) partes.Add($"entidad={Uri.EscapeDataString(Entidad)}");
+        if (Id is long id) partes.Add($"id={id}");
+        if (!string.IsNullOrWhiteSpace(Usuario)) partes.Add($"usuario={Uri.EscapeDataString(Usuario)}");
+        return "auditoria?" + string.Join("&", partes);
+    }
+
+    /// <summary>Enlace al registro auditado cuando tiene una pagina propia; si no, al historial de ese registro.</summary>
+    private static string EnlaceRegistro(string entidad, long id) => entidad switch
+    {
+        "Abonado" => $"abonados/{id}",
+        "Recibo" => $"recibos/{id}",
+        "Tarifa" => $"tarifas/{id}",
+        "Servicio" => $"servicios/{id}/medidores",
+        _ => $"auditoria?entidad={entidad}&id={id}",
+    };
+}

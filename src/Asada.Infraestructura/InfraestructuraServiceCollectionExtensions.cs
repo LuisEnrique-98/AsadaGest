@@ -1,11 +1,15 @@
 using Asada.Aplicacion.Abonados;
+using Asada.Aplicacion.Auditoria;
 using Asada.Aplicacion.Common;
+using Asada.Aplicacion.Configuracion;
 using Asada.Aplicacion.Mediciones;
+using Asada.Aplicacion.Periodos;
 using Asada.Aplicacion.Recibos;
 using Asada.Aplicacion.Tarifas;
 using Asada.Infraestructura.Documentos;
 using Asada.Infraestructura.Identidad;
 using Asada.Infraestructura.Persistence;
+using Asada.Infraestructura.Persistence.Auditoria;
 using Asada.Infraestructura.Persistence.Repositorios;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
@@ -30,16 +34,25 @@ public static class InfraestructuraServiceCollectionExtensions
             ?? throw new InvalidOperationException(
                 "Falta la cadena de conexion 'AsadaDb' en la configuracion (appsettings.json).");
 
-        servicios.AddDbContext<AsadaDbContext>(opciones => opciones
+        // Sprint 5: el interceptor de auditoria se resuelve del mismo alcance que el DbContext
+        // (una instancia por solicitud), porque lee el usuario actual y guarda estado entre el
+        // "antes" y el "despues" de cada SaveChanges.
+        servicios.AddScoped<InterceptorAuditoria>();
+        servicios.AddDbContext<AsadaDbContext>((proveedor, opciones) => opciones
             .UseNpgsql(cadenaConexion)
-            .UseSnakeCaseNamingConvention());
+            .UseSnakeCaseNamingConvention()
+            .AddInterceptors(proveedor.GetRequiredService<InterceptorAuditoria>()));
 
         servicios.AddHttpContextAccessor();
         servicios.AddScoped<IProveedorOrganizacion, ProveedorOrganizacion>();
+        servicios.AddScoped<IProveedorUsuario, ProveedorUsuario>();
         servicios.AddScoped<IRepositorioAbonados, RepositorioAbonados>();
         servicios.AddScoped<IRepositorioMediciones, RepositorioMediciones>();
         servicios.AddScoped<IRepositorioTarifas, RepositorioTarifas>();
         servicios.AddScoped<IRepositorioRecibos, RepositorioRecibos>();
+        servicios.AddScoped<IRepositorioPeriodos, RepositorioPeriodos>();
+        servicios.AddScoped<IRepositorioConfiguracion, RepositorioConfiguracion>();
+        servicios.AddScoped<IRepositorioAuditoria, RepositorioAuditoria>();
         servicios.AddSingleton<IProveedorFecha, ProveedorFecha>();
         servicios.AddSingleton<IGeneradorPdfRecibos, GeneradorPdfRecibos>();
 

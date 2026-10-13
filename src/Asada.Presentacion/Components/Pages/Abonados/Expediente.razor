@@ -1,7 +1,6 @@
 ﻿@page "/abonados/{AbonadoId:int}"
-@attribute [Authorize]
+@attribute [Authorize(Policy = Permisos.Consultar)]
 @using System.ComponentModel.DataAnnotations
-@using Microsoft.AspNetCore.Authorization
 
 @inject ObtenerExpedienteAbonadoCasoUso ObtenerExpediente
 @inject AgregarPropiedadCasoUso AgregarPropiedad
@@ -53,10 +52,10 @@ else if (Ok == "servicio")
 <div class="d-flex align-items-center gap-3 mb-3">
     <h1 class="mb-0">@expediente.Nombre</h1>
     <span class="badge @Etiquetas.ClaseEstado(expediente.Estado)">@Etiquetas.De(expediente.Estado)</span>
-    <AuthorizeView Roles="Administrador,Operador" Context="permisoEdicion">
+    <AuthorizeView Policy="@Permisos.EditarAbonados" Context="permisoEdicion">
         <a class="btn btn-sm btn-outline-secondary ms-auto" href="abonados/@expediente.Id/editar">Editar datos</a>
     </AuthorizeView>
-    <AuthorizeView Roles="Administrador" Context="permisoEstado">
+    <AuthorizeView Policy="@Permisos.CambiarEstadoAbonados" Context="permisoEstado">
         @* Formulario HTML normal (no EditForm): necesita su propio token antiforgery. *@
         <form method="post" @onsubmit="CambiarEstadoAsync" @formname="cambiar-estado">
             <AntiforgeryToken />
@@ -164,7 +163,7 @@ else if (Ok == "servicio")
                                     <td>@servicio.Observaciones</td>
                                     <td class="text-nowrap">
                                         <a class="btn btn-sm btn-outline-primary" href="servicios/@(servicio.Id)/medidores">Medidores</a>
-                                        <AuthorizeView Roles="Administrador,Operador" Context="permisoCategoria">
+                                        <AuthorizeView Policy="@Permisos.AsignarCategoria" Context="permisoCategoria">
                                             <a class="btn btn-sm btn-outline-secondary" href="servicios/@(servicio.Id)/categoria">Categoria</a>
                                         </AuthorizeView>
                                     </td>
@@ -178,7 +177,7 @@ else if (Ok == "servicio")
     </div>
 }
 
-<AuthorizeView Roles="Administrador,Operador" Context="autorizacion">
+<AuthorizeView Policy="@Permisos.EditarAbonados" Context="autorizacion">
     <div class="row mt-4">
         <div class="col-lg-6 mb-4">
             <h3 class="h5">Agregar propiedad</h3>

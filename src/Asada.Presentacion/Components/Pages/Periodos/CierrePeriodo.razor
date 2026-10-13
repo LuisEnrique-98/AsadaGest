@@ -1,0 +1,208 @@
+@page "/periodos"
+@attribute [Authorize(Policy = Permisos.Consultar)]
+@using Asada.Aplicacion.Common
+
+@inject ObtenerCierrePeriodoCasoUso ObtenerCierre
+@inject CerrarPeriodoCasoUso CerrarPeriodo
+@inject ReabrirPeriodoCasoUso ReabrirPeriodo
+@inject IProveedorFecha Fecha
+@inject NavigationManager Navegacion
+
+<PageTitle>Cierre de periodo</PageTitle>
+
+<h1>Cierre de periodo</h1>
+
+@if (Ok == "cerrado")
+{
+    <div class="alert alert-success">Periodo cerrado. Ya no se pueden registrar ni corregir lecturas ni generar o anular recibos de este mes.</div>
+}
+else if (Ok == "reabierto")
+{
+    <div class="alert alert-success">Periodo reabierto. Cierrelo de nuevo cuando termine las correcciones.</div>
+}
+
+@* Seleccion del periodo con un formulario GET: la pagina es SSR, el periodo viaja en la URL. *@
+<form method="get" action="periodos" class="row g-2 align-items-end mb-3">
+    <div class="col-auto">
+        <label for="mes" class="form-label">Mes</label>
+        <select id="mes" name="mes" class="form-select">
+            @for (var m = 1; m <= 12; m++)
+            {
+                <option value="@m" selected="@(m == mes)">@Etiquetas.Mes(m)</option>
+            }
+        </select>
+    </div>
+    <div class="col-auto">
+        <label for="anio" class="form-label">Anio</label>
+        <input id="anio" name="anio" type="number" min="2000" max="2100" class="form-control" value="@anio" />
+    </div>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-outline-primary">Ver periodo</button>
+    </div>
+</form>
+
+@if (error is not null)
+{
+    <div class="alert alert-danger">@error</div>
+    return;
+}
+
+@if (datos is null)
+{
+    <p><em>Cargando...</em></p>
+    return;
+}
+
+<div class="card mb-3">
+    <div class="card-body">
+        <h2 class="h5 mb-2">
+            @Etiquetas.Periodo(datos.Anio, datos.Mes)
+            <span class="badge @Etiquetas.ClasePeriodo(datos.Estado) ms-2">@Etiquetas.De(datos.Estado)</span>
+        </h2>
+        <p class="mb-1">
+            @datos.Servicios servicio(s) &middot; <strong>@datos.ConRecibo con recibo</strong> (@Etiquetas.Colones(datos.MontoEmitido))
+            &middot; @datos.SinLectura sin lectura &middot; @datos.ConLecturaSinRecibo con lectura sin recibo
+            @if (datos.Anulados > 0) { <span>@($" · {datos.Anulados} recibo(s) anulado(s)")</span> }
+        </p>
+        <p class="mb-0 small">
+            <a href="lecturas?anio=@(datos.Anio)&mes=@(datos.Mes)">Ver lecturas</a> &middot;
+            <a href="recibos?anio=@(datos.Anio)&mes=@(datos.Mes)">Ver recibos</a>
+        </p>
+        @if (datos.FechaCierre is DateTime cerrado)
+        {
+            <p class="mb-0 mt-2 text-muted small">Ultimo cierre: @Etiquetas.FechaHora(cerrado) por @datos.CerradoPorNombre.</p>
+        }
+        @if (datos.FechaReapertura is DateTime reabierto)
+        {
+            <p class="mb-0 text-muted small">Ultima reapertura: @Etiquetas.FechaHora(reabierto) por @datos.ReabiertoPorNombre. Motivo: @datos.MotivoReapertura</p>
+        }
+    </div>
+</div>
+
+<p class="text-muted small">
+    Al cerrar un periodo ya no se pueden registrar, corregir ni anular sus lecturas, ni generar o anular sus recibos.
+    Se puede cerrar despues de la ventana de lectura, cuando todos los servicios con lectura tienen su recibo. Los servicios
+    sin lectura no lo impiden: su consumo se cobra completo en la proxima lectura.
+</p>
+
+<AuthorizeView Policy="@Permisos.CerrarPeriodos" Context="permiso">
+    @if (errores.Count > 0)
+    {
+        <div class="alert alert-danger" role="alert">
+            <ul class="mb-0">@foreach (var e in errores) { <li>@e</li> }</ul>
+        </div>
+    }
+
+    @if (!datos.EstaCerrado)
+    {
+        <div class="card border-dark mb-3" style="max-width: 48rem">
+            <div class="card-body">
+                <h2 class="h5">Cerrar el periodo</h2>
+                @if (datos.PuedeCerrarse)
+                {
+                    <p class="mb-2">Todo lo que tiene lectura en @Etiquetas.Periodo(datos.Anio, datos.Mes) ya tiene recibo. Se puede cerrar.</p>
+                }
+                else
+                {
+                    <ul class="mb-2">@foreach (var i in datos.Impedimentos) { <li>@i</li> }</ul>
+                }
+
+                @* Sin <AntiforgeryToken />: el EditForm ya incluye el suyo. *@
+                <EditForm Model="ModeloCierre!" method="post" OnValidSubmit="CerrarAsync" FormName="cerrar-periodo">
+                    <button type="submit" class="btn btn-dark" disabled="@(!datos.PuedeCerrarse)"
+                            onclick="return confirm('¿Cerrar el periodo? Solo un Administrador lo podra reabrir.')">
+                        Cerrar @Etiquetas.Periodo(datos.Anio, datos.Mes)
+                    </button>
+                </EditForm>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="card border-warning mb-3" style="max-width: 48rem">
+            <div class="card-body">
+                <h2 class="h5">Reabrir el periodo</h2>
+                <p class="text-muted small">
+                    Solo para corregir algo (anular un recibo, corregir una lectura). La reapertura y su motivo quedan en la auditoria.
+                </p>
+                <EditForm Model="ModeloReapertura!" method="post" OnValidSubmit="ReabrirAsync" FormName="reabrir-periodo">
+                    <div class="mb-3">
+                        <label for="motivo" class="form-label">Motivo de la reapertura</label>
+                        <InputTextArea id="motivo" class="form-control" rows="2" @bind-Value="ModeloReapertura!.Motivo" />
+                    </div>
+                    <button type="submit" class="btn btn-warning">Reabrir @Etiquetas.Periodo(datos.Anio, datos.Mes)</button>
+                </EditForm>
+            </div>
+        </div>
+    }
+</AuthorizeView>
+
+@code {
+    [Parameter, SupplyParameterFromQuery(Name = "anio")] public int? Anio { get; set; }
+    [Parameter, SupplyParameterFromQuery(Name = "mes")] public int? Mes { get; set; }
+    [Parameter, SupplyParameterFromQuery(Name = "ok")] public string? Ok { get; set; }
+
+    private int anio;
+    private int mes;
+    private CierrePeriodoDto? datos;
+    private string? error;
+    private List<string> errores = [];
+
+    [SupplyParameterFromForm(FormName = "cerrar-periodo")]
+    private ModeloCerrar? ModeloCierre { get; set; }
+
+    [SupplyParameterFromForm(FormName = "reabrir-periodo")]
+    private ModeloReabrir? ModeloReapertura { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Por defecto, el mes anterior: es el que normalmente se termina de facturar y se cierra.
+        (anio, mes) = Anio is int a && Mes is int m && ReglasPeriodo.EsMesValido(a, m)
+            ? (a, m)
+            : ReglasPeriodo.Anterior(Fecha.Hoy.Year, Fecha.Hoy.Month);
+
+        ModeloCierre ??= new ModeloCerrar();
+        ModeloReapertura ??= new ModeloReabrir();
+        await CargarAsync();
+    }
+
+    private async Task CargarAsync()
+    {
+        var resultado = await ObtenerCierre.EjecutarAsync(anio, mes);
+        datos = resultado.Valor;
+        error = resultado.EsExitoso ? null : string.Join(" ", resultado.Errores);
+    }
+
+    private async Task CerrarAsync()
+    {
+        var resultado = await CerrarPeriodo.EjecutarAsync(anio, mes);
+        if (resultado.EsExitoso)
+        {
+            Navegacion.NavigateTo($"/periodos?anio={anio}&mes={mes}&ok=cerrado", forceLoad: true);
+            return;
+        }
+        errores = resultado.Errores.ToList();
+    }
+
+    private async Task ReabrirAsync()
+    {
+        var resultado = await ReabrirPeriodo.EjecutarAsync(new ReabrirPeriodoSolicitud(anio, mes, ModeloReapertura!.Motivo ?? ""));
+        if (resultado.EsExitoso)
+        {
+            Navegacion.NavigateTo($"/periodos?anio={anio}&mes={mes}&ok=reabierto", forceLoad: true);
+            return;
+        }
+        errores = resultado.Errores.ToList();
+    }
+
+    private sealed class ModeloCerrar
+    {
+        // Sin campos: el periodo viaja en la URL. El modelo existe porque EditForm lo exige.
+        public bool Confirmar { get; set; } = true;
+    }
+
+    private sealed class ModeloReabrir
+    {
+        public string? Motivo { get; set; }
+    }
+}

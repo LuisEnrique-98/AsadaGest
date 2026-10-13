@@ -1,5 +1,6 @@
 using Asada.Aplicacion.Common;
 using Asada.Dominio.Entidades;
+using Asada.Dominio.Enums;
 using Asada.Infraestructura.Identidad;
 using Asada.Infraestructura.Persistence.Configuraciones;
 using Microsoft.AspNetCore.Identity;
@@ -37,6 +38,7 @@ public class AsadaDbContext(DbContextOptions<AsadaDbContext> options, IProveedor
     public DbSet<Recibo> Recibos => Set<Recibo>();
     public DbSet<ReciboDetalle> ReciboDetalles => Set<ReciboDetalle>();
     public DbSet<CorrelativoRecibo> CorrelativosRecibo => Set<CorrelativoRecibo>();
+    public DbSet<RegistroAuditoria> Auditoria => Set<RegistroAuditoria>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -56,6 +58,7 @@ public class AsadaDbContext(DbContextOptions<AsadaDbContext> options, IProveedor
         builder.ApplyConfiguration(new TarifaBloqueConfiguracion());
         builder.ApplyConfiguration(new ReciboConfiguracion());
         builder.ApplyConfiguration(new ReciboDetalleConfiguracion());
+        builder.ApplyConfiguration(new RegistroAuditoriaConfiguracion());
 
         builder.Entity<CorrelativoRecibo>(e =>
         {
@@ -94,8 +97,12 @@ public class AsadaDbContext(DbContextOptions<AsadaDbContext> options, IProveedor
             proveedorOrganizacion.EsSuperadministrador || m.OrganizacionId == proveedorOrganizacion.OrganizacionId);
         builder.Entity<Periodo>().HasQueryFilter(p =>
             proveedorOrganizacion.EsSuperadministrador || p.OrganizacionId == proveedorOrganizacion.OrganizacionId);
+        // Sprint 5: ademas de la organizacion, las lecturas anuladas quedan fuera de toda consulta
+        // (consumo, lectura anterior, facturacion...). EF Core admite un solo filtro por entidad,
+        // por eso van las dos condiciones juntas.
         builder.Entity<Medicion>().HasQueryFilter(m =>
-            proveedorOrganizacion.EsSuperadministrador || m.OrganizacionId == proveedorOrganizacion.OrganizacionId);
+            (proveedorOrganizacion.EsSuperadministrador || m.OrganizacionId == proveedorOrganizacion.OrganizacionId)
+            && m.Estado == EstadoMedicion.Vigente);
         builder.Entity<SeguimientoLectura>().HasQueryFilter(s =>
             proveedorOrganizacion.EsSuperadministrador || s.OrganizacionId == proveedorOrganizacion.OrganizacionId);
 
@@ -108,6 +115,10 @@ public class AsadaDbContext(DbContextOptions<AsadaDbContext> options, IProveedor
             proveedorOrganizacion.EsSuperadministrador || t.OrganizacionId == proveedorOrganizacion.OrganizacionId);
         builder.Entity<Recibo>().HasQueryFilter(r =>
             proveedorOrganizacion.EsSuperadministrador || r.OrganizacionId == proveedorOrganizacion.OrganizacionId);
+
+        // Sprint 5: cada ASADA ve solo su bitacora de auditoria.
+        builder.Entity<RegistroAuditoria>().HasQueryFilter(a =>
+            proveedorOrganizacion.EsSuperadministrador || a.OrganizacionId == proveedorOrganizacion.OrganizacionId);
 
         // A proposito, Usuario NO lleva HasQueryFilter todavia, aunque tiene OrganizacionId:
         // UserManager/SignInManager consultan esta misma tabla para autenticar, y en ese

@@ -4,6 +4,7 @@ using Asada.Infraestructura.Persistence;
 using Asada.Infraestructura.Persistence.Seed;
 using Asada.Presentacion;
 using Asada.Presentacion.Components;
+using Asada.Presentacion.Seguridad;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -14,7 +15,8 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 builder.Services.AddCascadingAuthenticationState();
-builder.Services.AddAuthorization();
+// Matriz de permisos (Sprint 5): una politica por accion sensible. Ver Seguridad/Permisos.cs.
+builder.Services.AddAuthorization(opciones => opciones.AgregarPoliticasAsada());
 
 // Registra AsadaDbContext, ASP.NET Core Identity, IProveedorOrganizacion y la configuracion
 // de la cookie de autenticacion. Ver InfraestructuraServiceCollectionExtensions.

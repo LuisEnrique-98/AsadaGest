@@ -1,6 +1,5 @@
 @page "/recibos/{ReciboId:int}"
-@attribute [Authorize]
-@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Policy = Permisos.Consultar)]
 
 @inject ObtenerReciboCasoUso ObtenerRecibo
 
@@ -27,11 +26,36 @@
     return;
 }
 
-<div class="no-imprimir d-flex flex-wrap gap-2 mb-3">
+@if (Ok == "anulado")
+{
+    <div class="alert alert-success no-imprimir">
+        Recibo anulado. El servicio quedo listo para facturar de nuevo en @Etiquetas.Periodo(recibo.Anio, recibo.Mes):
+        si la lectura estaba mal, <a href="lecturas?anio=@(recibo.Anio)&mes=@(recibo.Mes)">corrijala</a> y despues
+        <a href="recibos?anio=@(recibo.Anio)&mes=@(recibo.Mes)">genere el recibo nuevo</a>.
+    </div>
+}
+
+<div class="no-imprimir d-flex flex-wrap align-items-center gap-2 mb-3">
     <a class="btn btn-link ps-0" href="recibos?anio=@(recibo.Anio)&mes=@(recibo.Mes)">&larr; Volver a recibos del periodo</a>
     @* El PDF es el formato oficial para imprimir (media carta con talon). *@
     <a class="btn btn-outline-primary btn-sm" href="recibos/@(recibo.Id)/pdf" target="_blank">Imprimir (PDF)</a>
+    @if (!recibo.EstaAnulado && !recibo.PeriodoCerrado)
+    {
+        <AuthorizeView Policy="@Permisos.AnularRecibos" Context="permisoAnular">
+            <a class="btn btn-outline-danger btn-sm" href="recibos/@(recibo.Id)/anular">Anular recibo</a>
+        </AuthorizeView>
+    }
+    <AuthorizeView Policy="@Permisos.VerAuditoria" Context="permisoAuditoria">
+        <a class="btn btn-link btn-sm" href="auditoria?entidad=Recibo&id=@(recibo.Id)">Historial</a>
+    </AuthorizeView>
 </div>
+
+@if (recibo.EstaAnulado)
+{
+    <div class="alert alert-danger no-imprimir">
+        <strong>Recibo anulado</strong>@DetalleAnulacion(recibo). Motivo: @recibo.MotivoAnulacion
+    </div>
+}
 
 @if (recibo.LecturaRequiereRevision)
 {
@@ -53,7 +77,7 @@
             <div class="text-end">
                 <div class="h5 mb-1">Recibo @recibo.Numero</div>
                 <div class="small">Periodo: @Etiquetas.Periodo(recibo.Anio, recibo.Mes)</div>
-                <div class="small">Emitido: @Etiquetas.Fecha(recibo.FechaEmision)</div>
+                <div class="small">Emitido: @Etiquetas.Fecha(recibo.FechaEmision)@(recibo.GeneradoPorNombre is null ? "" : $" por {recibo.GeneradoPorNombre}")</div>
                 <div class="small fw-bold">Vence: @Etiquetas.Fecha(recibo.FechaVencimiento)</div>
                 @if (recibo.Estado != EstadoRecibo.Emitido)
                 {
@@ -110,8 +134,13 @@
 
 @code {
     [Parameter] public int ReciboId { get; set; }
+    [Parameter, SupplyParameterFromQuery(Name = "ok")] public string? Ok { get; set; }
 
     private ReciboDto? recibo;
+
+    private static string DetalleAnulacion(ReciboDto r)
+        => (r.FechaAnulacion is DateTime f ? $" el {Etiquetas.FechaHora(f)}" : "")
+           + (r.AnuladoPorNombre is not null ? $" por {r.AnuladoPorNombre}" : "");
     private bool cargado;
 
     protected override async Task OnInitializedAsync()
