@@ -41,6 +41,10 @@ public static class CasosDeUsoServiceCollectionExtensions
         servicios.AddScoped<ObtenerFacturacionPeriodoCasoUso>();
         servicios.AddScoped<GenerarRecibosPeriodoCasoUso>();
         servicios.AddScoped<ObtenerReciboCasoUso>();
+
+        // Sprint 4: recibos en PDF.
+        servicios.AddScoped<DescargarPdfReciboCasoUso>();
+        servicios.AddScoped<DescargarPdfRecibosPeriodoCasoUso>();
         return servicios;
     }
 }

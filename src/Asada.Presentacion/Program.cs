@@ -65,4 +65,7 @@ app.MapPost("/cuenta/cerrar-sesion", async (SignInManager<Usuario> signInManager
     return Results.LocalRedirect("/cuenta/iniciar-sesion");
 });
 
+// Recibos en PDF (Sprint 4): /recibos/{id}/pdf y /recibos/pdf?anio=&mes=. Ver EndpointsRecibos.
+app.MapearEndpointsRecibos();
+
 app.Run();

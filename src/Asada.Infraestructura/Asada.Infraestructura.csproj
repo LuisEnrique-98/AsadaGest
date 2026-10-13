@@ -22,6 +22,9 @@
     <PackageReference Include="EFCore.NamingConventions" Version="8.0.*" />
     <!-- Autenticacion: ASP.NET Core Identity con almacenamiento en EF Core. -->
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.*" />
+    <!-- Generacion de los recibos en PDF (licencia Community: gratis para organizaciones con
+         ingresos anuales menores a US$1 millon). -->
+    <PackageReference Include="QuestPDF" Version="2026.*" />
     <!-- Herramientas de diseno de EF Core (necesarias para "dotnet ef migrations add"). -->
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.*">
       <PrivateAssets>all</PrivateAssets>
