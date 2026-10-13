@@ -195,7 +195,38 @@ dotnet run --project src/Asada.Presentacion
 
 Recuerde: los formularios `EditForm` NO llevan `<AntiforgeryToken />` (ya lo incluyen).
 
+## Sprint 3 -- Tarifas y recibos
+
+- **Categorias** (`/tarifas`): cada ASADA define las suyas (p. ej. Domiciliar, Empresarial). Cada servicio se asigna
+  a una desde el expediente (boton "Categoria", `/servicios/{id}/categoria`). Un servicio sin categoria no se factura.
+- **Tarifas versionadas** (`/tarifas/nueva/{categoria}`): cargo fijo + hasta 11 tramos con limite + un precio de
+  excedente obligatorio (consumo mayor al ultimo limite); cada m³ se cobra al precio de su tramo + hidrantes (por m³, monto fijo o no se cobra). Una tarifa no se
+  edita: un cambio de precios es una version nueva con fecha "vigente desde" posterior a la anterior y al ultimo mes
+  ya facturado. Para un periodo rige la ultima version vigente al cierre del mes.
+- **Simulador** (`/tarifas/{id}?consumo=20`): calcula el desglose sin guardar nada, para revisar contra el pliego.
+- **Recibos del periodo** (`/recibos`): estado de cada servicio (con recibo, listo, sin lectura, sin categoria,
+  sin tarifa) y boton "Generar". Se puede generar varias veces: solo se facturan los que aun no tienen recibo.
+  Sin lectura = no se factura. Lectura para revision = se factura y queda senalada.
+- **Recibo** (`/recibos/{id}`): numero `CB-REC-2026-000001` (correlativo por ASADA y anio, reservado de forma atomica),
+  datos congelados al emitir (C-02) y boton "Imprimir" del navegador. El PDF/DOCX llega en el Sprint 4.
+- Permisos: categorias y tarifas solo Administrador; asignar categoria y generar recibos Administrador y Operador;
+  Consulta ve todo. La anulacion de recibos llega en el Sprint 5.
+- Montos con 2 decimales, redondeo comercial por linea; el total es la suma de las lineas.
+
+Pasos:
+
+```bash
+dotnet build
+dotnet test
+dotnet ef migrations add Sprint3TarifasRecibos \
+  --project src/Asada.Infraestructura \
+  --startup-project src/Asada.Presentacion
+dotnet run --project src/Asada.Presentacion
+```
+
+Los tramos del formulario de tarifa se reciben como texto a proposito: el navegador envia vacias las filas sin
+usar y un `decimal?` vacio dentro de una lista hace que el enlace de Blazor descarte la fila completa.
+
 ## Siguiente paso
 
-Una vez que confirmes que `dotnet build` compila limpio en tu maquina (y me cuentes que
-errores salieron, si salio alguno), seguimos con el **Sprint 1 -- Abonados**.
+Sprint 4 -- Recibos en PDF/DOCX y generacion masiva para imprimir.

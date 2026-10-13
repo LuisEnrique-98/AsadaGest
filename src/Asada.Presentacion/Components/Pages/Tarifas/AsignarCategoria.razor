@@ -1,0 +1,104 @@
+@page "/servicios/{ServicioId:int}/categoria"
+@attribute [Authorize(Roles = "Administrador,Operador")]
+@using Microsoft.AspNetCore.Authorization
+
+@inject ObtenerCategoriaServicioCasoUso ObtenerDatos
+@inject AsignarCategoriaServicioCasoUso Asignar
+@inject NavigationManager Navegacion
+
+<PageTitle>Categoria del servicio</PageTitle>
+
+@if (cargado && datos is null)
+{
+    <div class="alert alert-warning">El servicio no existe o no pertenece a su ASADA.</div>
+    return;
+}
+
+@if (Modelo is null || datos is null)
+{
+    <p><em>Cargando...</em></p>
+    return;
+}
+
+<p><a href="abonados/@(datos.AbonadoId)">&larr; Volver al expediente</a></p>
+
+<h1>Categoria tarifaria</h1>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <p class="mb-1"><strong>@datos.AbonadoCodigo</strong> &middot; @datos.AbonadoNombre</p>
+        <p class="mb-0">Servicio #@datos.ServicioId &middot; @datos.PropiedadDireccion</p>
+    </div>
+</div>
+
+@if (datos.CategoriasDisponibles.Count == 0)
+{
+    <div class="alert alert-warning">
+        La ASADA todavia no tiene categorias tarifarias.
+        <AuthorizeView Roles="Administrador" Context="permiso"><a href="tarifas">Cree una en Tarifas.</a></AuthorizeView>
+    </div>
+    return;
+}
+
+<div class="row">
+    <div class="col-lg-6">
+        @* Sin <AntiforgeryToken />: el EditForm ya incluye el suyo. *@
+        <EditForm Model="Modelo" method="post" OnValidSubmit="GuardarAsync" FormName="categoria-servicio">
+            @if (errores.Count > 0)
+            {
+                <div class="alert alert-danger" role="alert">
+                    <ul class="mb-0">@foreach (var e in errores) { <li>@e</li> }</ul>
+                </div>
+            }
+
+            <div class="mb-3">
+                <label for="categoria" class="form-label">Categoria</label>
+                <InputSelect id="categoria" class="form-select" @bind-Value="Modelo.CategoriaId">
+                    <option value="0">-- Seleccione --</option>
+                    @foreach (var c in datos.CategoriasDisponibles)
+                    {
+                        <option value="@c.Id">@(c.Nombre + (c.Estado != EstadoRegistro.Activo ? " (inactiva)" : ""))</option>
+                    }
+                </InputSelect>
+                <div class="form-text">El cambio aplica a los recibos que se generen despues; los ya emitidos no cambian.</div>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Guardar</button>
+            <a class="btn btn-link" href="abonados/@(datos.AbonadoId)">Cancelar</a>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    [Parameter] public int ServicioId { get; set; }
+
+    private CategoriaServicioDto? datos;
+    private bool cargado;
+    private List<string> errores = [];
+
+    [SupplyParameterFromForm(FormName = "categoria-servicio")]
+    private ModeloCategoria? Modelo { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        datos = (await ObtenerDatos.EjecutarAsync(ServicioId)).Valor;
+        cargado = true;
+        Modelo ??= new ModeloCategoria { CategoriaId = datos?.CategoriaId ?? 0 };
+    }
+
+    private async Task GuardarAsync()
+    {
+        var resultado = await Asignar.EjecutarAsync(new AsignarCategoriaSolicitud(ServicioId, Modelo!.CategoriaId));
+        if (resultado.EsExitoso)
+        {
+            Navegacion.NavigateTo($"/abonados/{datos!.AbonadoId}?ok=categoria", forceLoad: true);
+            return;
+        }
+        errores = resultado.Errores.ToList();
+    }
+
+    private sealed class ModeloCategoria
+    {
+        public int CategoriaId { get; set; }
+    }
+}
