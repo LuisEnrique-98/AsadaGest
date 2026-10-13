@@ -161,6 +161,20 @@ public class RepositorioRecibos(AsadaDbContext db) : IRepositorioRecibos
         return (recibo, periodo);
     }
 
+    public async Task<IReadOnlyList<Recibo>> ListarRecibosPeriodoAsync(int anio, int mes, CancellationToken ct = default)
+    {
+        var periodo = await db.Periodos.AsNoTracking().FirstOrDefaultAsync(p => p.Anio == anio && p.Mes == mes, ct);
+        if (periodo is null) return [];
+
+        // AsSplitQuery: una consulta para los recibos y otra para todas sus lineas, en vez de un
+        // JOIN que repite los datos del recibo en cada linea del desglose.
+        return await db.Recibos.AsNoTracking()
+            .Include(r => r.Detalles)
+            .AsSplitQuery()
+            .Where(r => r.PeriodoId == periodo.Id)
+            .ToListAsync(ct);
+    }
+
     public Task<Organizacion?> ObtenerOrganizacionAsync(int organizacionId, CancellationToken ct = default)
         => db.Organizaciones.AsNoTracking().FirstOrDefaultAsync(o => o.Id == organizacionId, ct);
 }

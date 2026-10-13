@@ -29,7 +29,8 @@
 
 <div class="no-imprimir d-flex flex-wrap gap-2 mb-3">
     <a class="btn btn-link ps-0" href="recibos?anio=@(recibo.Anio)&mes=@(recibo.Mes)">&larr; Volver a recibos del periodo</a>
-    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="window.print()">Imprimir</button>
+    @* El PDF es el formato oficial para imprimir (media carta con talon). *@
+    <a class="btn btn-outline-primary btn-sm" href="recibos/@(recibo.Id)/pdf" target="_blank">Imprimir (PDF)</a>
 </div>
 
 @if (recibo.LecturaRequiereRevision)

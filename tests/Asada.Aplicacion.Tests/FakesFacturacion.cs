@@ -153,6 +153,13 @@ public sealed class RepositorioRecibosEnMemoria : IRepositorioRecibos
         return Task.FromResult<(Recibo, Periodo)?>(r is null ? null : (r, Periodos.First(p => p.Id == r.PeriodoId)));
     }
 
+    public Task<IReadOnlyList<Recibo>> ListarRecibosPeriodoAsync(int anio, int mes, CancellationToken ct = default)
+    {
+        var periodo = Periodos.FirstOrDefault(p => p.Anio == anio && p.Mes == mes);
+        return Task.FromResult<IReadOnlyList<Recibo>>(
+            periodo is null ? [] : Recibos.Where(r => r.PeriodoId == periodo.Id).ToList());
+    }
+
     public Task<Organizacion?> ObtenerOrganizacionAsync(int organizacionId, CancellationToken ct = default)
         => Task.FromResult<Organizacion?>(new Organizacion { Id = organizacionId, Codigo = "CB", Nombre = "ASADA Cuatro Bocas" });
 }
