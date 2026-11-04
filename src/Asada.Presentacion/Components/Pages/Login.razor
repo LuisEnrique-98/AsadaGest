@@ -62,9 +62,12 @@
             return;
         }
 
+        // Sprint 5b: un usuario desactivado (o de una ASADA inactiva) recibe NotAllowed; ver SignInManagerAsada.
         mensajeError = resultado.IsLockedOut
-            ? "Esta cuenta esta bloqueada temporalmente por demasiados intentos fallidos."
-            : "Correo o contrasena incorrectos.";
+            ? "Esta cuenta quedo bloqueada por 15 minutos por demasiados intentos fallidos. El Administrador de su ASADA puede desbloquearla antes."
+            : resultado.IsNotAllowed
+                ? "Su usuario esta desactivado. Consulte con el Administrador de su ASADA."
+                : "Correo o contrasena incorrectos.";
     }
 
     private sealed class ModeloIngreso

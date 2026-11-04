@@ -1,0 +1,25 @@
+@* Lista de roles de una ASADA con la descripcion de cada uno. Se usa dentro de un EditForm con @bind-Valor.
+   Sin Name en el InputRadioGroup: en formularios SSR el nombre del campo sale de la expresion enlazada
+   (p. ej. Modelo.Rol), y es lo que permite recibir el valor al enviar. *@
+<fieldset class="mb-3">
+    <legend class="form-label fs-6">Rol</legend>
+    <InputRadioGroup Value="Valor" ValueChanged="ValorChanged" ValueExpression="ValorExpression">
+        @foreach (var rol in RolesUsuario.DeAsada)
+        {
+            <div class="form-check">
+                <InputRadio class="form-check-input" id="@($"{Id}-{rol}")" Value="rol" />
+                <label class="form-check-label" for="@($"{Id}-{rol}")">
+                    <strong>@rol</strong> <span class="text-muted small">&middot; @Etiquetas.DescripcionRol(rol)</span>
+                </label>
+            </div>
+        }
+    </InputRadioGroup>
+    <div class="form-text"><a href="permisos" target="_blank">Ver el detalle de permisos por rol</a></div>
+</fieldset>
+
+@code {
+    [Parameter, EditorRequired] public string Id { get; set; } = "rol";
+    [Parameter] public string? Valor { get; set; }
+    [Parameter] public EventCallback<string?> ValorChanged { get; set; }
+    [Parameter] public System.Linq.Expressions.Expression<Func<string?>>? ValorExpression { get; set; }
+}

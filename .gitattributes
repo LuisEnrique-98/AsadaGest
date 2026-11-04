@@ -3,6 +3,10 @@
 ###############################################################################
 * text=auto
 
+# Sprint 5b: los scripts de respaldo corren dentro de un contenedor Linux; con fines de linea de
+# Windows (CRLF) bash fallaria. Siempre LF, aunque se clone en Windows.
+*.sh text eol=lf
+
 ###############################################################################
 # Set default behavior for command prompt diff.
 #

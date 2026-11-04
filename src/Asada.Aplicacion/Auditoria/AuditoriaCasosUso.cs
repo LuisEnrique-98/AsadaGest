@@ -56,7 +56,7 @@ public class BuscarAuditoriaCasoUso(IRepositorioAuditoria repositorio)
     public static readonly IReadOnlyList<string> Entidades =
     [
         "Abonado", "Propiedad", "Servicio", "Medidor", "Medicion", "SeguimientoLectura", "Periodo",
-        "CategoriaServicio", "Tarifa", "Recibo", "Organizacion",
+        "CategoriaServicio", "Tarifa", "Recibo", "Organizacion", "Usuario",
     ];
 
     public async Task<Resultado<PaginaResultado<RegistroAuditoriaDto>>> EjecutarAsync(

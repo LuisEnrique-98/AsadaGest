@@ -15,13 +15,13 @@
 @if (organizacion is not null)
 {
     <p>Ha iniciado sesion en <strong>@organizacion.Nombre</strong> (@organizacion.Codigo).</p>
+    <p><a href="abonados">Ir a Abonados</a></p>
 }
 else
 {
     <p>Ha iniciado sesion como <strong>Superadministrador</strong> de la plataforma.</p>
+    <p><a href="plataforma/asadas">Ir a las ASADAs</a></p>
 }
-
-<p><a href="abonados">Ir a Abonados</a></p>
 
 @code {
     [CascadingParameter]

@@ -130,6 +130,9 @@ public static class Etiquetas
         AccionAuditoria.Creacion => "Creacion",
         AccionAuditoria.Modificacion => "Modificacion",
         AccionAuditoria.Eliminacion => "Eliminacion",
+        AccionAuditoria.InicioSesion => "Inicio de sesion",
+        AccionAuditoria.InicioSesionFallido => "Intento fallido",
+        AccionAuditoria.CuentaBloqueada => "Cuenta bloqueada",
         _ => accion.ToString(),
     };
 
@@ -137,7 +140,40 @@ public static class Etiquetas
     {
         AccionAuditoria.Creacion => "bg-success",
         AccionAuditoria.Modificacion => "bg-primary",
+        AccionAuditoria.InicioSesion => "bg-secondary",
+        AccionAuditoria.InicioSesionFallido => "bg-warning text-dark",
         _ => "bg-danger",
+    };
+
+    // ---- Sprint 5b ----
+
+    public static string De(EstadoUsuario estado) => estado switch
+    {
+        EstadoUsuario.Activo => "Activo",
+        EstadoUsuario.Inactivo => "Desactivado",
+        _ => estado.ToString(),
+    };
+
+    public static string ClaseEstado(EstadoUsuario estado)
+        => estado == EstadoUsuario.Activo ? "bg-success" : "bg-secondary";
+
+    public static string De(EstadoOrganizacion estado) => estado switch
+    {
+        EstadoOrganizacion.Activa => "Activa",
+        EstadoOrganizacion.Inactiva => "Inactiva",
+        _ => estado.ToString(),
+    };
+
+    /// <summary>Hora de Costa Rica de un instante UTC con desfase (p. ej. el fin de un bloqueo).</summary>
+    public static string FechaHora(DateTimeOffset instante) => FechaHora(instante.UtcDateTime);
+
+    /// <summary>Que puede hacer cada rol, en una frase (formularios de usuarios).</summary>
+    public static string DescripcionRol(string rol) => rol switch
+    {
+        "Administrador" => "Todo, incluidos usuarios, tarifas, anulaciones, cierre de periodos y auditoria.",
+        "Operador" => "Trabajo diario: abonados, medidores, lecturas y generacion de recibos.",
+        "Consulta" => "Solo ver informacion y descargar recibos.",
+        _ => "",
     };
 
     /// <summary>Nombre en pantalla de cada entidad de la bitacora.</summary>
@@ -147,6 +183,7 @@ public static class Etiquetas
         "SeguimientoLectura" => "Anotacion de lectura",
         "CategoriaServicio" => "Categoria",
         "Organizacion" => "ASADA",
+        "Usuario" => "Usuario",
         _ => entidad,
     };
 

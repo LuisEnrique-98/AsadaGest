@@ -10,6 +10,7 @@
             <AuthorizeView>
                 <Authorized>
                     <span class="me-3">@context.User.Identity?.Name</span>
+                    <a class="me-3" href="cuenta/cambiar-contrasena">Cambiar contrasena</a>
                     <FormularioCerrarSesion />
                 </Authorized>
                 <NotAuthorized>

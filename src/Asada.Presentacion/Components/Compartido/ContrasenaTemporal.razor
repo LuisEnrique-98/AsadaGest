@@ -1,0 +1,18 @@
+@* Muestra una contrasena temporal recien generada. Solo se ve en esta respuesta: no se guarda en claro en ningun lado. *@
+<div class="alert alert-success" style="max-width: 48rem">
+    <h2 class="h5">@Titulo</h2>
+    <p class="mb-2">Entreguele estos datos a la persona. La contrasena es temporal: el sistema le pedira cambiarla en su primer ingreso.</p>
+    <dl class="row mb-2">
+        <dt class="col-sm-4">Usuario (correo)</dt>
+        <dd class="col-sm-8"><code>@Correo</code></dd>
+        <dt class="col-sm-4">Contrasena temporal</dt>
+        <dd class="col-sm-8"><code class="fs-5 user-select-all">@Contrasena</code></dd>
+    </dl>
+    <p class="small mb-0"><strong>Anotela ahora:</strong> no se vuelve a mostrar. Si se pierde, restablezcala desde la ficha del usuario.</p>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Titulo { get; set; } = "";
+    [Parameter, EditorRequired] public string Correo { get; set; } = "";
+    [Parameter, EditorRequired] public string Contrasena { get; set; } = "";
+}

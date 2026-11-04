@@ -1,0 +1,99 @@
+@page "/plataforma/asadas/nueva"
+@attribute [Authorize(Policy = Permisos.AdministrarPlataforma)]
+@using System.ComponentModel.DataAnnotations
+
+@inject RegistrarAsadaCasoUso RegistrarAsada
+
+<PageTitle>Registrar ASADA</PageTitle>
+
+<p><a href="plataforma/asadas">&larr; Volver a las ASADAs</a></p>
+
+<h1>Registrar ASADA</h1>
+
+@if (registrada is not null)
+{
+    <div class="alert alert-info" style="max-width: 48rem">
+        ASADA <strong>@registrada.Nombre</strong> registrada con el codigo <strong>@registrada.Codigo</strong>.
+        Sus abonados seran @(registrada.Codigo)-AB-000001, @(registrada.Codigo)-AB-000002... y sus recibos @(registrada.Codigo)-REC-@(DateTime.Today.Year)-000001...
+    </div>
+    <ContrasenaTemporal Titulo="Administrador de la ASADA" Correo="@registrada.CorreoAdministrador" Contrasena="@registrada.ContrasenaTemporal" />
+    <p class="text-muted" style="max-width: 48rem">
+        Al entrar, el Administrador completa los datos de contacto de la ASADA (Configuracion), crea los demas usuarios,
+        las categorias y las tarifas.
+    </p>
+    <p>
+        <a class="btn btn-primary" href="usuarios?asada=@registrada.OrganizacionId">Ver sus usuarios</a>
+        <a class="btn btn-outline-secondary" href="plataforma/asadas">Volver a las ASADAs</a>
+    </p>
+    return;
+}
+
+<div class="row">
+    <div class="col-lg-7">
+        @* Sin <AntiforgeryToken />: el EditForm ya incluye el suyo. *@
+        <EditForm Model="Modelo" method="post" OnValidSubmit="RegistrarAsync" FormName="nueva-asada">
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" role="alert" />
+            @if (errores.Count > 0)
+            {
+                <div class="alert alert-danger" role="alert">
+                    <ul class="mb-0">@foreach (var e in errores) { <li>@e</li> }</ul>
+                </div>
+            }
+
+            <h2 class="h5">ASADA</h2>
+            <div class="row">
+                <div class="col-sm-4 mb-3">
+                    <label for="codigo" class="form-label">Codigo</label>
+                    <InputText id="codigo" class="form-control text-uppercase" @bind-Value="Modelo.Codigo"
+                               maxlength="@ReglasOrganizacion.LargoMaximoCodigo" placeholder="CB" />
+                </div>
+                <div class="col-sm-8 mb-3">
+                    <label for="nombre" class="form-label">Nombre</label>
+                    <InputText id="nombre" class="form-control" @bind-Value="Modelo.Nombre" placeholder="ASADA ..." />
+                </div>
+            </div>
+            <div class="form-text mb-4">
+                El codigo (@ReglasOrganizacion.LargoMinimoCodigo a @ReglasOrganizacion.LargoMaximoCodigo letras) encabeza todos los
+                numeros de abonado y de recibo de la ASADA y <strong>no se puede cambiar despues</strong>.
+            </div>
+
+            <h2 class="h5">Primer Administrador</h2>
+            <div class="mb-3">
+                <label for="admin-nombre" class="form-label">Nombre completo</label>
+                <InputText id="admin-nombre" class="form-control" @bind-Value="Modelo.NombreAdministrador" />
+            </div>
+            <div class="mb-4">
+                <label for="admin-correo" class="form-label">Correo</label>
+                <InputText id="admin-correo" type="email" class="form-control" @bind-Value="Modelo.CorreoAdministrador" autocomplete="off" />
+                <div class="form-text">Es su usuario para iniciar sesion. Recibira una contrasena temporal en la pantalla siguiente.</div>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Registrar ASADA</button>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromForm(FormName = "nueva-asada")]
+    private ModeloAsada Modelo { get; set; } = new();
+
+    private AsadaRegistradaDto? registrada;
+    private List<string> errores = [];
+
+    private async Task RegistrarAsync()
+    {
+        var resultado = await RegistrarAsada.EjecutarAsync(new RegistrarAsadaSolicitud(
+            Modelo.Codigo, Modelo.Nombre, Modelo.NombreAdministrador, Modelo.CorreoAdministrador));
+        if (resultado.EsExitoso) registrada = resultado.Valor;
+        else errores = resultado.Errores.ToList();
+    }
+
+    private sealed class ModeloAsada
+    {
+        [Required(ErrorMessage = "Indique el codigo.")] public string? Codigo { get; set; }
+        [Required(ErrorMessage = "Indique el nombre de la ASADA.")] public string? Nombre { get; set; }
+        [Required(ErrorMessage = "Indique el nombre del Administrador.")] public string? NombreAdministrador { get; set; }
+        [Required(ErrorMessage = "Indique el correo del Administrador.")] public string? CorreoAdministrador { get; set; }
+    }
+}

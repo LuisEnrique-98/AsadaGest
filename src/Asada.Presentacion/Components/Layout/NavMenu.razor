@@ -14,39 +14,47 @@
             </NavLink>
         </div>
 
-        <AuthorizeView>
-            <Authorized>
+        @* Sprint 5b: las opciones de la ASADA se muestran a quien puede consultarlas (sus usuarios); el
+           Superadministrador, que no tiene ASADA, ve solo las de la plataforma. *@
+        <AuthorizeView Policy="@Permisos.Consultar" Context="permisoConsultar">
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="abonados">
+                    <span class="bi bi-people-fill-nav-menu" aria-hidden="true"></span> Abonados
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="lecturas">
+                    <span class="bi bi-people-fill-nav-menu" aria-hidden="true"></span> Lecturas
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="recibos">
+                    <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Recibos
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="tarifas">
+                    <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Tarifas
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="periodos">
+                    <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Periodos
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="permisos">
+                    <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Permisos
+                </NavLink>
+            </div>
+
+            <AuthorizeView Policy="@Permisos.GestionarUsuarios" Context="permisoUsuarios">
                 <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="abonados">
-                        <span class="bi bi-people-fill-nav-menu" aria-hidden="true"></span> Abonados
+                    <NavLink class="nav-link" href="usuarios">
+                        <span class="bi bi-people-fill-nav-menu" aria-hidden="true"></span> Usuarios
                     </NavLink>
                 </div>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="lecturas">
-                        <span class="bi bi-people-fill-nav-menu" aria-hidden="true"></span> Lecturas
-                    </NavLink>
-                </div>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="recibos">
-                        <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Recibos
-                    </NavLink>
-                </div>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="tarifas">
-                        <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Tarifas
-                    </NavLink>
-                </div>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="periodos">
-                        <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Periodos
-                    </NavLink>
-                </div>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="permisos">
-                        <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Permisos
-                    </NavLink>
-                </div>
-            </Authorized>
+            </AuthorizeView>
         </AuthorizeView>
 
         <AuthorizeView Policy="@Permisos.VerAuditoria" Context="permisoAuditoria">
@@ -60,6 +68,14 @@
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="configuracion">
                     <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Configuracion
+                </NavLink>
+            </div>
+        </AuthorizeView>
+
+        <AuthorizeView Policy="@Permisos.AdministrarPlataforma" Context="permisoPlataforma">
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="plataforma/asadas">
+                    <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> ASADAs
                 </NavLink>
             </div>
         </AuthorizeView>

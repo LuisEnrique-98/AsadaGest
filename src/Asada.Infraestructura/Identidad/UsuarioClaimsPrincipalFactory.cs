@@ -28,6 +28,13 @@ public class UsuarioClaimsPrincipalFactory(
             identidad.AddClaim(new Claim(ClaimsAsada.OrganizacionId, organizacionId.ToString()));
         }
 
+        // Sprint 5b: con una contrasena temporal solo se puede entrar a cambiarla (ver
+        // Asada.Presentacion/Seguridad/CambioContrasenaObligatorio.cs).
+        if (usuario.DebeCambiarContrasena)
+        {
+            identidad.AddClaim(new Claim(ClaimsAsada.DebeCambiarContrasena, "1"));
+        }
+
         return identidad;
     }
 }
