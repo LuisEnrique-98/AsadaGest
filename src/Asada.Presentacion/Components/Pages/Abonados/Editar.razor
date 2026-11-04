@@ -1,7 +1,6 @@
 @page "/abonados/{AbonadoId:int}/editar"
-@attribute [Authorize(Roles = "Administrador,Operador")]
+@attribute [Authorize(Policy = Permisos.EditarAbonados)]
 @using System.ComponentModel.DataAnnotations
-@using Microsoft.AspNetCore.Authorization
 
 @inject ObtenerExpedienteAbonadoCasoUso ObtenerExpediente
 @inject ActualizarAbonadoCasoUso ActualizarAbonado

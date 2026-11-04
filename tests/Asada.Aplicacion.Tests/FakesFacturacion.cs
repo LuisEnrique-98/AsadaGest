@@ -1,4 +1,5 @@
 using Asada.Aplicacion.Recibos;
+using Asada.Aplicacion.Recibos.Dtos;
 using Asada.Aplicacion.Tarifas;
 using Asada.Dominio.Entidades;
 using Asada.Dominio.Enums;
@@ -119,8 +120,15 @@ public sealed class RepositorioRecibosEnMemoria : IRepositorioRecibos
         MedicionId = null, Lectura = null, FechaLectura = null, Consumo = null, NumeroSerieMedidor = null, MedidorId = null,
     };
 
+    public int Guardados { get; private set; }
+
+    // Como en la base de datos: un recibo anulado deja de contar como "el recibo del servicio".
     public Task<IReadOnlyList<ServicioAFacturar>> ListarServiciosDelPeriodoAsync(int anio, int mes, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyList<ServicioAFacturar>>(Servicios.ToList());
+        => Task.FromResult<IReadOnlyList<ServicioAFacturar>>(Servicios
+            .Select(s => s.ReciboId is int id && Recibos.FirstOrDefault(r => r.Id == id)?.Estado == EstadoRecibo.Anulado
+                ? s with { ReciboId = null, ReciboNumero = null, ReciboTotal = null }
+                : s)
+            .ToList());
 
     public Task<IReadOnlyList<Tarifa>> ListarTarifasAsync(CancellationToken ct = default)
         => Task.FromResult<IReadOnlyList<Tarifa>>(Tarifas.ToList());
@@ -162,4 +170,42 @@ public sealed class RepositorioRecibosEnMemoria : IRepositorioRecibos
 
     public Task<Organizacion?> ObtenerOrganizacionAsync(int organizacionId, CancellationToken ct = default)
         => Task.FromResult<Organizacion?>(new Organizacion { Id = organizacionId, Codigo = "CB", Nombre = "ASADA Cuatro Bocas" });
+
+    public Task<(Recibo Recibo, Periodo Periodo)?> ObtenerReciboParaModificarAsync(int reciboId, CancellationToken ct = default)
+        => ObtenerReciboAsync(reciboId, ct);
+
+    public Task<IReadOnlyList<ReciboAnuladoDto>> ListarAnuladosPeriodoAsync(int anio, int mes, CancellationToken ct = default)
+    {
+        var periodo = Periodos.FirstOrDefault(p => p.Anio == anio && p.Mes == mes);
+        return Task.FromResult<IReadOnlyList<ReciboAnuladoDto>>(periodo is null ? [] : Recibos
+            .Where(r => r.PeriodoId == periodo.Id && r.Estado == EstadoRecibo.Anulado)
+            .OrderByDescending(r => r.FechaAnulacion)
+            .Select(r => new ReciboAnuladoDto(r.Id, r.Numero, r.AbonadoCodigo, r.AbonadoNombre, r.Total,
+                r.FechaAnulacion, r.AnuladoPorNombre, r.MotivoAnulacion))
+            .ToList());
+    }
+
+    public Task GuardarCambiosAsync(CancellationToken ct = default) { Guardados++; return Task.CompletedTask; }
+}
+
+/// <summary>Repositorio de periodos en memoria; comparte la lista de periodos con el de recibos.</summary>
+public sealed class RepositorioPeriodosEnMemoria(List<Periodo> periodos) : Asada.Aplicacion.Periodos.IRepositorioPeriodos
+{
+    public int Guardados { get; private set; }
+
+    public Task<Periodo?> ObtenerPeriodoAsync(int anio, int mes, CancellationToken ct = default)
+        => Task.FromResult(periodos.FirstOrDefault(p => p.Anio == anio && p.Mes == mes));
+
+    public Task<Periodo> ObtenerOCrearPeriodoAsync(int anio, int mes, CancellationToken ct = default)
+    {
+        var periodo = periodos.FirstOrDefault(p => p.Anio == anio && p.Mes == mes);
+        if (periodo is null)
+        {
+            periodo = new Periodo { Id = periodos.Count + 100, OrganizacionId = 1, Anio = anio, Mes = mes };
+            periodos.Add(periodo);
+        }
+        return Task.FromResult(periodo);
+    }
+
+    public Task GuardarCambiosAsync(CancellationToken ct = default) { Guardados++; return Task.CompletedTask; }
 }

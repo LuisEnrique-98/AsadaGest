@@ -1,0 +1,222 @@
+@page "/lecturas/{MedicionId:int}/corregir"
+@attribute [Authorize(Policy = Permisos.CorregirLecturas)]
+@using System.ComponentModel.DataAnnotations
+@using Asada.Aplicacion.Common
+
+@inject ObtenerLecturaCasoUso ObtenerLectura
+@inject CorregirLecturaCasoUso CorregirLecturaUso
+@inject AnularLecturaCasoUso AnularLecturaUso
+@inject IProveedorFecha Fecha
+@inject NavigationManager Navegacion
+
+<PageTitle>Corregir lectura</PageTitle>
+
+@if (cargado && lectura is null)
+{
+    <p><a href="lecturas">&larr; Volver a lecturas</a></p>
+    <div class="alert alert-warning">La lectura no existe, fue anulada o no pertenece a su ASADA.</div>
+    return;
+}
+
+@if (lectura is null || Correccion is null || Anulacion is null)
+{
+    <p><em>Cargando...</em></p>
+    return;
+}
+
+<p><a href="@VolverA">&larr; Volver a lecturas de @Etiquetas.Periodo(lectura.Anio, lectura.Mes)</a></p>
+
+<h1>Corregir o anular lectura</h1>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <p class="mb-1"><a href="abonados/@lectura.AbonadoId"><strong>@lectura.AbonadoCodigo</strong></a> &middot; @lectura.AbonadoNombre</p>
+        <p class="mb-2">@lectura.PropiedadDireccion &middot; Medidor @lectura.NumeroSerieMedidor</p>
+        <p class="mb-1">
+            Periodo <strong>@Etiquetas.Periodo(lectura.Anio, lectura.Mes)</strong>
+            <span class="badge @Etiquetas.ClasePeriodo(lectura.EstadoPeriodo) ms-1">@Etiquetas.De(lectura.EstadoPeriodo)</span>
+        </p>
+        <p class="mb-1">
+            Lectura <strong>@Etiquetas.Metros(lectura.Lectura)</strong> del @Etiquetas.Fecha(lectura.FechaLectura)
+            &middot; consumo <strong>@Etiquetas.Metros(lectura.Consumo)</strong>
+        </p>
+        @if (lectura.RequiereRevision)
+        {
+            <p class="mb-1"><span class="badge bg-warning text-dark">Revisar</span> <small>@lectura.MotivosRevision</small></p>
+        }
+        @if (!string.IsNullOrWhiteSpace(lectura.Observaciones))
+        {
+            <p class="mb-1 text-muted small">Observacion: @lectura.Observaciones</p>
+        }
+        <p class="mb-0 text-muted small">
+            Registrada el @Etiquetas.FechaHora(lectura.FechaRegistro)@(lectura.RegistradaPorNombre is null ? "" : $" por {lectura.RegistradaPorNombre}").
+            @if (lectura.FechaUltimaCorreccion is DateTime corregida)
+            {
+                <span>@($" Ultima correccion el {Etiquetas.FechaHora(corregida)} por {lectura.CorregidaPorNombre}: {lectura.MotivoCorreccion}")</span>
+            }
+        </p>
+    </div>
+</div>
+
+@if (!lectura.PuedeModificarse)
+{
+    <div class="alert alert-warning" role="alert">
+        <strong>Esta lectura no se puede corregir ni anular.</strong> @lectura.RazonNoModificable
+        @if (lectura.ReciboId is int reciboId)
+        {
+            <div class="mt-2"><a class="btn btn-sm btn-outline-dark" href="recibos/@reciboId">Ver recibo @lectura.ReciboNumero</a></div>
+        }
+    </div>
+    return;
+}
+
+<div class="row g-4">
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-body">
+                <h2 class="h5">Corregir</h2>
+                <p class="text-muted small">
+                    Para un valor o una fecha mal anotados. El consumo y los motivos de revision se recalculan.
+                    El periodo no cambia: si la lectura es de otro mes, anulela y registrela de nuevo.
+                </p>
+
+                @* Sin <AntiforgeryToken />: el EditForm ya incluye el suyo. *@
+                <EditForm Model="Correccion" method="post" OnValidSubmit="CorregirAsync" FormName="corregir-lectura">
+                    <DataAnnotationsValidator />
+                    @if (erroresCorreccion.Count > 0)
+                    {
+                        <div class="alert alert-danger" role="alert">
+                            <ul class="mb-0">@foreach (var e in erroresCorreccion) { <li>@e</li> }</ul>
+                        </div>
+                    }
+
+                    <div class="mb-3">
+                        <label for="fecha" class="form-label">Fecha en que se tomo la lectura</label>
+                        <InputDate id="fecha" class="form-control" @bind-Value="Correccion.FechaLectura" />
+                    </div>
+                    <div class="mb-3">
+                        <label for="lectura" class="form-label">Lectura del medidor (m³)</label>
+                        <InputNumber id="lectura" class="form-control" @bind-Value="Correccion.Lectura" />
+                        <ValidationMessage For="() => Correccion.Lectura" />
+                    </div>
+                    <div class="mb-3">
+                        <label for="obs" class="form-label">Observaciones</label>
+                        <InputText id="obs" class="form-control" @bind-Value="Correccion.Observaciones" />
+                    </div>
+                    <div class="mb-3">
+                        <label for="motivo-correccion" class="form-label">Motivo de la correccion</label>
+                        <InputTextArea id="motivo-correccion" class="form-control" rows="2" @bind-Value="Correccion.Motivo" />
+                        <div class="form-text">Obligatorio. Queda guardado en la auditoria.</div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Guardar correccion</button>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card h-100 border-danger">
+            <div class="card-body">
+                <h2 class="h5 text-danger">Anular</h2>
+                <p class="text-muted small">
+                    Para una lectura registrada por error (otro servicio, otro periodo). No se borra: queda anulada con su
+                    motivo, deja de contar para el consumo y la facturacion, y el servicio queda sin lectura en
+                    @Etiquetas.Periodo(lectura.Anio, lectura.Mes), listo para registrarla de nuevo.
+                </p>
+
+                <EditForm Model="Anulacion" method="post" OnValidSubmit="AnularAsync" FormName="anular-lectura">
+                    @if (erroresAnulacion.Count > 0)
+                    {
+                        <div class="alert alert-danger" role="alert">
+                            <ul class="mb-0">@foreach (var e in erroresAnulacion) { <li>@e</li> }</ul>
+                        </div>
+                    }
+
+                    <div class="mb-3">
+                        <label for="motivo-anulacion" class="form-label">Motivo de la anulacion</label>
+                        <InputTextArea id="motivo-anulacion" class="form-control" rows="2" @bind-Value="Anulacion.Motivo" />
+                        <div class="form-text">Obligatorio. Queda guardado en la auditoria.</div>
+                    </div>
+                    <button type="submit" class="btn btn-outline-danger"
+                            onclick="return confirm('¿Anular esta lectura? Esta accion no se puede deshacer.')">
+                        Anular lectura
+                    </button>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public int MedicionId { get; set; }
+
+    private LecturaDetalleDto? lectura;
+    private bool cargado;
+    private List<string> erroresCorreccion = [];
+    private List<string> erroresAnulacion = [];
+
+    [SupplyParameterFromForm(FormName = "corregir-lectura")]
+    private ModeloCorreccion? Correccion { get; set; }
+
+    [SupplyParameterFromForm(FormName = "anular-lectura")]
+    private ModeloAnulacion? Anulacion { get; set; }
+
+    private string VolverA => lectura is null ? "lecturas" : $"lecturas?anio={lectura.Anio}&mes={lectura.Mes}";
+
+    protected override async Task OnInitializedAsync()
+    {
+        lectura = (await ObtenerLectura.EjecutarAsync(MedicionId)).Valor;
+        cargado = true;
+        if (lectura is null) return;
+
+        // Si la pagina llega por un envio de uno de los formularios, ese modelo ya trae lo escrito.
+        Correccion ??= new ModeloCorreccion
+        {
+            FechaLectura = lectura.FechaLectura,
+            Lectura = lectura.Lectura,
+            Observaciones = lectura.Observaciones,
+        };
+        Anulacion ??= new ModeloAnulacion();
+    }
+
+    private async Task CorregirAsync()
+    {
+        var resultado = await CorregirLecturaUso.EjecutarAsync(new CorregirLecturaSolicitud(
+            MedicionId, Correccion!.FechaLectura, Correccion.Lectura ?? 0m, Correccion.Observaciones, Correccion.Motivo ?? ""));
+
+        if (resultado.EsExitoso)
+        {
+            var revision = resultado.Valor!.RequiereRevision ? "&revision=1" : "";
+            Navegacion.NavigateTo($"/lecturas?anio={lectura!.Anio}&mes={lectura.Mes}&ok=corregida{revision}", forceLoad: true);
+            return;
+        }
+        erroresCorreccion = resultado.Errores.ToList();
+    }
+
+    private async Task AnularAsync()
+    {
+        var resultado = await AnularLecturaUso.EjecutarAsync(new AnularLecturaSolicitud(MedicionId, Anulacion!.Motivo ?? ""));
+        if (resultado.EsExitoso)
+        {
+            Navegacion.NavigateTo($"/lecturas?anio={lectura!.Anio}&mes={lectura.Mes}&ok=anulada", forceLoad: true);
+            return;
+        }
+        erroresAnulacion = resultado.Errores.ToList();
+    }
+
+    private sealed class ModeloCorreccion
+    {
+        public DateOnly FechaLectura { get; set; }
+
+        [Required(ErrorMessage = "Ingrese la lectura del medidor.")]
+        public decimal? Lectura { get; set; }
+
+        public string? Observaciones { get; set; }
+        public string? Motivo { get; set; }
+    }
+
+    private sealed class ModeloAnulacion
+    {
+        public string? Motivo { get; set; }
+    }
+}

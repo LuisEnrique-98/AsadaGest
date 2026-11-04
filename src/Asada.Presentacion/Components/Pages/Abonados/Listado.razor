@@ -1,6 +1,5 @@
 @page "/abonados"
-@attribute [Authorize]
-@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Policy = Permisos.Consultar)]
 @using Asada.Aplicacion.Common
 
 @inject BuscarAbonadosCasoUso Buscar
@@ -9,7 +8,7 @@
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h1 class="mb-0">Abonados</h1>
-    <AuthorizeView Roles="Administrador,Operador">
+    <AuthorizeView Policy="@Permisos.EditarAbonados">
         <a class="btn btn-primary" href="abonados/nuevo">Nuevo abonado</a>
     </AuthorizeView>
 </div>

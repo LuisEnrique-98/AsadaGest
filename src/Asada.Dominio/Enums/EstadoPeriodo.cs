@@ -1,6 +1,6 @@
 namespace Asada.Dominio.Enums;
 
-/// <summary>El cierre formal del periodo (impedir cambios) llega en el Sprint 5.</summary>
+/// <summary>Cerrado impide registrar o corregir lecturas y generar o anular recibos del periodo (Sprint 5).</summary>
 public enum EstadoPeriodo
 {
     Abierto = 1,

@@ -107,4 +107,54 @@ public static class Etiquetas
         EstadoRecibo.Anulado => "Anulado",
         _ => estado.ToString(),
     };
+
+    // ---- Sprint 5 ----
+
+    private static readonly TimeSpan DesfaseCostaRica = TimeSpan.FromHours(-6);
+
+    /// <summary>Fecha y hora de Costa Rica (UTC-6) de un instante guardado en UTC.</summary>
+    public static string FechaHora(DateTime utc) => (utc + DesfaseCostaRica).ToString("dd/MM/yyyy HH:mm");
+
+    public static string De(EstadoPeriodo estado) => estado switch
+    {
+        EstadoPeriodo.Abierto => "Abierto",
+        EstadoPeriodo.Cerrado => "Cerrado",
+        _ => estado.ToString(),
+    };
+
+    public static string ClasePeriodo(EstadoPeriodo estado)
+        => estado == EstadoPeriodo.Cerrado ? "bg-dark" : "bg-success";
+
+    public static string De(AccionAuditoria accion) => accion switch
+    {
+        AccionAuditoria.Creacion => "Creacion",
+        AccionAuditoria.Modificacion => "Modificacion",
+        AccionAuditoria.Eliminacion => "Eliminacion",
+        _ => accion.ToString(),
+    };
+
+    public static string ClaseAccion(AccionAuditoria accion) => accion switch
+    {
+        AccionAuditoria.Creacion => "bg-success",
+        AccionAuditoria.Modificacion => "bg-primary",
+        _ => "bg-danger",
+    };
+
+    /// <summary>Nombre en pantalla de cada entidad de la bitacora.</summary>
+    public static string Entidad(string entidad) => entidad switch
+    {
+        "Medicion" => "Lectura",
+        "SeguimientoLectura" => "Anotacion de lectura",
+        "CategoriaServicio" => "Categoria",
+        "Organizacion" => "ASADA",
+        _ => entidad,
+    };
+
+    /// <summary>"MotivoAnulacion" -> "Motivo anulacion": los nombres de campo ya estan en espanol.</summary>
+    public static string Campo(string campo)
+    {
+        if (string.IsNullOrEmpty(campo)) return campo;
+        var texto = System.Text.RegularExpressions.Regex.Replace(campo, "(?<=[a-z0-9])([A-Z])", " $1").ToLowerInvariant();
+        return char.ToUpperInvariant(texto[0]) + texto[1..];
+    }
 }

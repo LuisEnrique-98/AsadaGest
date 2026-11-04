@@ -1,6 +1,5 @@
 @page "/lecturas"
-@attribute [Authorize]
-@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Policy = Permisos.Consultar)]
 @using Asada.Aplicacion.Common
 
 @inject ObtenerLecturasPeriodoCasoUso ObtenerLecturas
@@ -21,6 +20,18 @@
 else if (Ok == "seguimiento")
 {
     <div class="alert alert-success">Anotacion guardada.</div>
+}
+else if (Ok == "corregida")
+{
+    <div class="alert alert-success">Lectura corregida. El consumo se recalculo y la correccion quedo en la auditoria.</div>
+    @if (Revision == "1")
+    {
+        <div class="alert alert-warning">La lectura corregida sigue marcada para revision. Los motivos aparecen en la fila del servicio.</div>
+    }
+}
+else if (Ok == "anulada")
+{
+    <div class="alert alert-success">Lectura anulada. El servicio quedo sin lectura en este periodo; puede registrarla de nuevo.</div>
 }
 
 @* Seleccion del periodo con un formulario GET: la pagina es SSR, el periodo viaja en la URL. *@
@@ -64,6 +75,10 @@ else if (Ok == "seguimiento")
         <h2 class="h5 mb-2">
             Periodo de @Etiquetas.Periodo(datos.Anio, datos.Mes)
             <span class="badge @Etiquetas.ClaseVentana(datos.EstadoVentana) ms-2">Ventana @Etiquetas.De(datos.EstadoVentana).ToLower()</span>
+            @if (datos.PeriodoCerrado)
+            {
+                <span class="badge bg-dark ms-1">Periodo cerrado</span>
+            }
         </h2>
         <p class="mb-1">
             Toma de lecturas: del <strong>@Etiquetas.Fecha(datos.InicioVentana)</strong>
@@ -76,7 +91,14 @@ else if (Ok == "seguimiento")
     </div>
 </div>
 
-@if (datos.HayAlerta)
+@if (datos.PeriodoCerrado)
+{
+    <div class="alert alert-secondary" role="alert">
+        Este periodo esta <strong>cerrado</strong>: no se pueden registrar, corregir ni anular lecturas.
+        Un Administrador lo puede reabrir desde <a href="periodos?anio=@(datos.Anio)&mes=@(datos.Mes)">Periodos</a>.
+    </div>
+}
+else if (datos.HayAlerta)
 {
     <div class="alert alert-danger" role="alert">
         <strong>@datos.SinLectura servicio(s) sin lectura</strong> en @Etiquetas.Periodo(datos.Anio, datos.Mes):
@@ -142,8 +164,20 @@ else if (Ok == "seguimiento")
                                 <br />
                                 <small class="text-muted">Observacion: @f.ObservacionesLectura</small>
                             }
+                            @if (f.RegistradaPorNombre is not null)
+                            {
+                                <br />
+                                <small class="text-muted">Registrada por @f.RegistradaPorNombre</small>
+                            }
                         </td>
-                        <td></td>
+                        <td class="text-nowrap">
+                            @if (!datos.PeriodoCerrado && f.MedicionId is int medicionId)
+                            {
+                                <AuthorizeView Policy="@Permisos.CorregirLecturas" Context="permisoCorregir">
+                                    <a class="btn btn-sm btn-outline-secondary" href="lecturas/@(medicionId)/corregir">Corregir</a>
+                                </AuthorizeView>
+                            }
+                        </td>
                     }
                     else
                     {
@@ -165,13 +199,16 @@ else if (Ok == "seguimiento")
                             }
                         </td>
                         <td class="text-nowrap">
-                            <AuthorizeView Roles="Administrador,Operador" Context="permiso">
-                                @if (f.TieneMedidor)
-                                {
-                                    <a class="btn btn-sm btn-primary" href="lecturas/registrar/@(f.ServicioId)?anio=@(datos.Anio)&mes=@(datos.Mes)">Registrar lectura</a>
-                                }
-                                <a class="btn btn-sm btn-outline-secondary" href="lecturas/seguimiento/@(f.ServicioId)?anio=@(datos.Anio)&mes=@(datos.Mes)">Anotar</a>
-                            </AuthorizeView>
+                            @if (!datos.PeriodoCerrado)
+                            {
+                                <AuthorizeView Policy="@Permisos.RegistrarLecturas" Context="permiso">
+                                    @if (f.TieneMedidor)
+                                    {
+                                        <a class="btn btn-sm btn-primary" href="lecturas/registrar/@(f.ServicioId)?anio=@(datos.Anio)&mes=@(datos.Mes)">Registrar lectura</a>
+                                    }
+                                    <a class="btn btn-sm btn-outline-secondary" href="lecturas/seguimiento/@(f.ServicioId)?anio=@(datos.Anio)&mes=@(datos.Mes)">Anotar</a>
+                                </AuthorizeView>
+                            }
                         </td>
                     }
                 </tr>

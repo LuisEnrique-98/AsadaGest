@@ -1,7 +1,6 @@
 @page "/lecturas/registrar/{ServicioId:int}"
-@attribute [Authorize(Roles = "Administrador,Operador")]
+@attribute [Authorize(Policy = Permisos.RegistrarLecturas)]
 @using System.ComponentModel.DataAnnotations
-@using Microsoft.AspNetCore.Authorization
 @using Asada.Aplicacion.Common
 
 @inject ObtenerLecturasPeriodoCasoUso ObtenerLecturas

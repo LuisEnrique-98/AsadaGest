@@ -17,10 +17,12 @@ namespace Asada.Aplicacion.Mediciones;
 ///   - Fuera de ventana: la fecha de lectura no cae en la ultima semana del mes del periodo.
 ///   - Periodo anterior sin lectura: el servicio se salto al menos un periodo (RB-014); el
 ///     consumo NO se reparte entre meses, se factura completo y queda marcado.
-///   - Consumo anormal: supera el promedio de los ultimos 3 consumos en mas del umbral.
+///   - Consumo anormal: supera el promedio de los ultimos 3 consumos en mas del umbral de la ASADA.
+/// Sprint 5: no se registran lecturas en un periodo cerrado, y queda guardado quien la registro.
 /// </summary>
 public class RegistrarLecturaCasoUso(
-    IRepositorioMediciones repositorio, IProveedorOrganizacion proveedorOrganizacion, IProveedorFecha fecha)
+    IRepositorioMediciones repositorio, IProveedorOrganizacion proveedorOrganizacion, IProveedorFecha fecha,
+    IProveedorUsuario usuario)
 {
     public async Task<Resultado<LecturaRegistradaDto>> EjecutarAsync(
         RegistrarLecturaSolicitud s, CancellationToken ct = default)
@@ -41,67 +43,33 @@ public class RegistrarLecturaCasoUso(
         if (servicio.Estado != EstadoRegistro.Activo)
             return Resultado<LecturaRegistradaDto>.Falla("El servicio esta inactivo; no se le pueden registrar lecturas.");
 
+        var existente = await repositorio.ObtenerPeriodoAsync(s.Anio, s.Mes, ct);
+        if (existente is { EstaCerrado: true })
+            return Resultado<LecturaRegistradaDto>.Falla(
+                $"El periodo {s.Mes:00}/{s.Anio} esta cerrado; no se pueden registrar lecturas en el.");
+
         var medidores = await repositorio.ListarMedidoresDeServicioAsync(s.ServicioId, ct);
         var medidorActual = medidores.FirstOrDefault(m => m.Estado == EstadoMedidor.Activo);
         if (medidorActual is null)
             return Resultado<LecturaRegistradaDto>.Falla("El servicio no tiene un medidor activo. Instale un medidor antes de registrar lecturas.");
 
-        if (s.FechaLectura < medidorActual.FechaInstalacion)
-            return Resultado<LecturaRegistradaDto>.Falla(
-                $"La fecha de lectura es anterior a la instalacion del medidor ({medidorActual.FechaInstalacion:dd/MM/yyyy}).");
-
         var anterior = await repositorio.ObtenerUltimaLecturaAsync(s.ServicioId, ct);
-        if (anterior is not null)
-        {
-            // Una sola lectura por servicio y periodo, y siempre en orden cronologico.
-            if (ReglasPeriodo.Comparar(s.Anio, s.Mes, anterior.Anio, anterior.Mes) <= 0)
-                return Resultado<LecturaRegistradaDto>.Falla(
-                    $"Este servicio ya tiene una lectura del periodo {anterior.Mes:00}/{anterior.Anio} o de uno posterior.");
 
-            if (s.FechaLectura < anterior.FechaLectura)
-                return Resultado<LecturaRegistradaDto>.Falla(
-                    $"La fecha de lectura es anterior a la lectura previa ({anterior.FechaLectura:dd/MM/yyyy}).");
-        }
-
-        // Cadena de medidores entre la lectura anterior y la actual (RB-013).
-        IReadOnlyList<Medidor> cadena;
-        if (anterior is null)
-        {
-            cadena = [medidorActual];
-        }
-        else
-        {
-            var indiceAnterior = medidores.ToList().FindIndex(m => m.Id == anterior.MedidorId);
-            var indiceActual = medidores.ToList().FindIndex(m => m.Id == medidorActual.Id);
-            if (indiceAnterior < 0 || indiceActual < indiceAnterior)
-                return Resultado<LecturaRegistradaDto>.Falla("El historial de medidores del servicio es inconsistente.");
-
-            cadena = medidores.Skip(indiceAnterior).Take(indiceActual - indiceAnterior + 1).ToList();
-        }
-
-        var consumo = CalculadoraConsumo.Calcular(anterior, cadena, s.Lectura);
-        if (!consumo.EsValido) return Resultado<LecturaRegistradaDto>.Falla(consumo.Error!);
-
-        // Motivos para revision manual.
-        var motivos = new List<string>();
-
-        if (!ReglasPeriodo.EstaEnVentana(s.Anio, s.Mes, s.FechaLectura))
-            motivos.Add(
-                $"Lectura fuera de la ventana del periodo ({ReglasPeriodo.InicioVentana(s.Anio, s.Mes):dd/MM} al {ReglasPeriodo.FinVentana(s.Anio, s.Mes):dd/MM/yyyy})");
-
-        if (anterior is not null)
-        {
-            var (anioPrevio, mesPrevio) = ReglasPeriodo.Anterior(s.Anio, s.Mes);
-            if (ReglasPeriodo.Comparar(anterior.Anio, anterior.Mes, anioPrevio, mesPrevio) < 0)
-                motivos.Add("El periodo anterior quedo sin lectura; el consumo incluye mas de un mes");
-        }
+        // Una sola lectura por servicio y periodo, y siempre en orden cronologico.
+        if (anterior is not null && ReglasPeriodo.Comparar(s.Anio, s.Mes, anterior.Anio, anterior.Mes) <= 0)
+            return Resultado<LecturaRegistradaDto>.Falla(
+                $"Este servicio ya tiene una lectura del periodo {anterior.Mes:00}/{anterior.Anio} o de uno posterior.");
 
         var recientes = await repositorio.ObtenerConsumosRecientesAsync(
             s.ServicioId, ReglasConsumoAnormal.PeriodosReferencia, ct);
-        if (ReglasConsumoAnormal.EsAnormal(consumo.Consumo, recientes))
-            motivos.Add("Consumo muy superior al promedio de los ultimos periodos");
+        var umbral = await repositorio.ObtenerPorcentajeConsumoAnormalAsync(ct);
 
-        var periodo = await repositorio.ObtenerOCrearPeriodoAsync(s.Anio, s.Mes, ct);
+        var evaluacion = EvaluadorLectura.Evaluar(
+            s.Anio, s.Mes, s.FechaLectura, s.Lectura, medidorActual, medidores, anterior, recientes, umbral);
+        if (!evaluacion.EsExitoso) return Resultado<LecturaRegistradaDto>.Falla(evaluacion.Errores);
+        var (consumo, motivos) = evaluacion.Valor!;
+
+        var periodo = existente ?? await repositorio.ObtenerOCrearPeriodoAsync(s.Anio, s.Mes, ct);
 
         var medicion = new Medicion
         {
@@ -111,10 +79,12 @@ public class RegistrarLecturaCasoUso(
             PeriodoId = periodo.Id,
             FechaLectura = s.FechaLectura,
             Lectura = s.Lectura,
-            Consumo = consumo.Consumo,
+            Consumo = consumo,
             RequiereRevision = motivos.Count > 0,
             MotivosRevision = motivos.Count > 0 ? string.Join(" | ", motivos) : null,
             Observaciones = Validacion.Limpiar(s.Observaciones),
+            RegistradaPorUsuarioId = usuario.UsuarioId,
+            RegistradaPorNombre = usuario.Nombre,
         };
 
         await repositorio.AgregarMedicionAsync(medicion, ct);

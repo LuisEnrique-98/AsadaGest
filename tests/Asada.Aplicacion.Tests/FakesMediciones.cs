@@ -12,6 +12,12 @@ public sealed class ProveedorFechaFalso(DateOnly hoy) : IProveedorFecha
     public DateOnly Hoy => hoy;
 }
 
+public sealed class ProveedorUsuarioFalso(int? usuarioId = 7, string nombre = "Ana Operadora") : IProveedorUsuario
+{
+    public int? UsuarioId => usuarioId;
+    public string Nombre => nombre;
+}
+
 /// <summary>Repositorio en memoria que imita las reglas de orden y busqueda de RepositorioMediciones (EF Core).</summary>
 public sealed class RepositorioMedicionesEnMemoria : IRepositorioMediciones
 {
@@ -21,6 +27,12 @@ public sealed class RepositorioMedicionesEnMemoria : IRepositorioMediciones
     public List<Medicion> Mediciones { get; } = [];
     public List<SeguimientoLectura> Seguimientos { get; } = [];
     public int Guardados { get; private set; }
+
+    /// <summary>Umbral de consumo anormal de la ASADA (Organizacion.PorcentajeConsumoAnormal).</summary>
+    public decimal PorcentajeConsumoAnormal { get; set; } = 50m;
+
+    /// <summary>Recibos emitidos por id de lectura (para las reglas de correccion y anulacion).</summary>
+    public Dictionary<int, ReciboDeLectura> RecibosEmitidos { get; } = [];
 
     /// <summary>Crea un abonado con una propiedad y un servicio (todos con Id=1) y lo registra.</summary>
     public Servicio NuevoServicio(int organizacionId = 1, EstadoRegistro estado = EstadoRegistro.Activo)
@@ -70,8 +82,9 @@ public sealed class RepositorioMedicionesEnMemoria : IRepositorioMediciones
         return Task.FromResult(periodo);
     }
 
+    // Como el filtro global de EF Core: las lecturas anuladas no existen para las consultas.
     private IEnumerable<(Medicion M, Periodo P)> LecturasDe(int servicioId)
-        => Mediciones.Where(m => m.ServicioId == servicioId)
+        => Mediciones.Where(m => m.ServicioId == servicioId && m.EstaVigente)
             .Join(Periodos, m => m.PeriodoId, p => p.Id, (m, p) => (m, p))
             .OrderByDescending(x => x.p.Anio).ThenByDescending(x => x.p.Mes);
 
@@ -81,6 +94,34 @@ public sealed class RepositorioMedicionesEnMemoria : IRepositorioMediciones
         return Task.FromResult<LecturaAnterior?>(
             x.M is null ? null : new LecturaAnterior(x.M.Lectura, x.M.MedidorId, x.P.Anio, x.P.Mes, x.M.FechaLectura));
     }
+
+    public Task<Periodo?> ObtenerPeriodoAsync(int anio, int mes, CancellationToken ct = default)
+        => Task.FromResult(Periodos.FirstOrDefault(p => p.Anio == anio && p.Mes == mes));
+
+    public Task<Periodo?> ObtenerPeriodoPorIdAsync(int periodoId, CancellationToken ct = default)
+        => Task.FromResult(Periodos.FirstOrDefault(p => p.Id == periodoId));
+
+    public Task<decimal> ObtenerPorcentajeConsumoAnormalAsync(CancellationToken ct = default)
+        => Task.FromResult(PorcentajeConsumoAnormal);
+
+    private IEnumerable<(Medicion M, Periodo P)> LecturasAnterioresA(int servicioId, int anio, int mes)
+        => LecturasDe(servicioId).Where(x => ReglasPeriodo.Comparar(x.P.Anio, x.P.Mes, anio, mes) < 0);
+
+    public Task<LecturaAnterior?> ObtenerLecturaAnteriorAAsync(int servicioId, int anio, int mes, CancellationToken ct = default)
+    {
+        var x = LecturasAnterioresA(servicioId, anio, mes).FirstOrDefault();
+        return Task.FromResult<LecturaAnterior?>(
+            x.M is null ? null : new LecturaAnterior(x.M.Lectura, x.M.MedidorId, x.P.Anio, x.P.Mes, x.M.FechaLectura));
+    }
+
+    public Task<IReadOnlyList<decimal>> ObtenerConsumosAnterioresAAsync(int servicioId, int anio, int mes, int cantidad, CancellationToken ct = default)
+        => Task.FromResult<IReadOnlyList<decimal>>(LecturasAnterioresA(servicioId, anio, mes).Take(cantidad).Select(x => x.M.Consumo).ToList());
+
+    public Task<Medicion?> ObtenerMedicionAsync(int medicionId, CancellationToken ct = default)
+        => Task.FromResult(Mediciones.FirstOrDefault(m => m.Id == medicionId && m.EstaVigente));
+
+    public Task<ReciboDeLectura?> ObtenerReciboEmitidoDeLecturaAsync(int medicionId, CancellationToken ct = default)
+        => Task.FromResult(RecibosEmitidos.GetValueOrDefault(medicionId));
 
     public Task<IReadOnlyList<decimal>> ObtenerConsumosRecientesAsync(int servicioId, int cantidad, CancellationToken ct = default)
         => Task.FromResult<IReadOnlyList<decimal>>(LecturasDe(servicioId).Take(cantidad).Select(x => x.M.Consumo).ToList());
@@ -118,7 +159,7 @@ public sealed class RepositorioMedicionesEnMemoria : IRepositorioMediciones
                 s.Id, ab.Id, ab.Codigo, ab.Nombre, s.Propiedad.Direccion, activo?.NumeroSerie,
                 lectura.M?.FechaLectura, lectura.M?.Lectura, lectura.M?.Consumo,
                 lectura.M?.RequiereRevision ?? false, lectura.M?.MotivosRevision, lectura.M?.Observaciones,
-                seg?.Decision, seg?.Nota);
+                seg?.Decision, seg?.Nota, lectura.M?.Id, lectura.M?.RegistradaPorNombre);
         }).ToList();
         return Task.FromResult<IReadOnlyList<FilaLecturaPeriodoDto>>(filas);
     }
