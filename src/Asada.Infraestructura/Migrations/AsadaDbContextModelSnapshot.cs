@@ -17,7 +17,7 @@ namespace Asada.Infraestructura.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.31")
+                .HasAnnotation("ProductVersion", "8.0.32")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -159,10 +159,40 @@ namespace Asada.Infraestructura.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("AnuladaPorNombre")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("anulada_por_nombre");
+
+                    b.Property<int?>("AnuladaPorUsuarioId")
+                        .HasColumnType("integer")
+                        .HasColumnName("anulada_por_usuario_id");
+
                     b.Property<decimal>("Consumo")
                         .HasPrecision(12, 3)
                         .HasColumnType("numeric(12,3)")
                         .HasColumnName("consumo");
+
+                    b.Property<string>("CorregidaPorNombre")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("corregida_por_nombre");
+
+                    b.Property<int?>("CorregidaPorUsuarioId")
+                        .HasColumnType("integer")
+                        .HasColumnName("corregida_por_usuario_id");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("Vigente")
+                        .HasColumnName("estado");
+
+                    b.Property<DateTime?>("FechaAnulacion")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_anulacion");
 
                     b.Property<DateTime>("FechaCreacion")
                         .HasColumnType("timestamp with time zone")
@@ -172,6 +202,10 @@ namespace Asada.Infraestructura.Migrations
                         .HasColumnType("date")
                         .HasColumnName("fecha_lectura");
 
+                    b.Property<DateTime?>("FechaUltimaCorreccion")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_ultima_correccion");
+
                     b.Property<decimal>("Lectura")
                         .HasPrecision(12, 3)
                         .HasColumnType("numeric(12,3)")
@@ -180,6 +214,16 @@ namespace Asada.Infraestructura.Migrations
                     b.Property<int>("MedidorId")
                         .HasColumnType("integer")
                         .HasColumnName("medidor_id");
+
+                    b.Property<string>("MotivoAnulacion")
+                        .HasMaxLength(400)
+                        .HasColumnType("character varying(400)")
+                        .HasColumnName("motivo_anulacion");
+
+                    b.Property<string>("MotivoCorreccion")
+                        .HasMaxLength(400)
+                        .HasColumnType("character varying(400)")
+                        .HasColumnName("motivo_correccion");
 
                     b.Property<string>("MotivosRevision")
                         .HasMaxLength(800)
@@ -198,6 +242,15 @@ namespace Asada.Infraestructura.Migrations
                     b.Property<int>("PeriodoId")
                         .HasColumnType("integer")
                         .HasColumnName("periodo_id");
+
+                    b.Property<string>("RegistradaPorNombre")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("registrada_por_nombre");
+
+                    b.Property<int?>("RegistradaPorUsuarioId")
+                        .HasColumnType("integer")
+                        .HasColumnName("registrada_por_usuario_id");
 
                     b.Property<bool>("RequiereRevision")
                         .HasColumnType("boolean")
@@ -221,7 +274,8 @@ namespace Asada.Infraestructura.Migrations
 
                     b.HasIndex("ServicioId", "PeriodoId")
                         .IsUnique()
-                        .HasDatabaseName("ix_mediciones_servicio_id_periodo_id");
+                        .HasDatabaseName("ix_mediciones_servicio_id_periodo_id")
+                        .HasFilter("estado = 'Vigente'");
 
                     b.ToTable("mediciones", (string)null);
                 });
@@ -360,6 +414,13 @@ namespace Asada.Infraestructura.Migrations
                         .HasColumnType("character varying(150)")
                         .HasColumnName("nombre");
 
+                    b.Property<decimal>("PorcentajeConsumoAnormal")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(6, 2)
+                        .HasColumnType("numeric(6,2)")
+                        .HasDefaultValue(50m)
+                        .HasColumnName("porcentaje_consumo_anormal");
+
                     b.Property<string>("Provincia")
                         .HasMaxLength(80)
                         .HasColumnType("character varying(80)")
@@ -399,23 +460,54 @@ namespace Asada.Infraestructura.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("anio");
 
+                    b.Property<string>("CerradoPorNombre")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("cerrado_por_nombre");
+
+                    b.Property<int?>("CerradoPorUsuarioId")
+                        .HasColumnType("integer")
+                        .HasColumnName("cerrado_por_usuario_id");
+
                     b.Property<string>("Estado")
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)")
                         .HasColumnName("estado");
 
+                    b.Property<DateTime?>("FechaCierre")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_cierre");
+
                     b.Property<DateTime>("FechaCreacion")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("fecha_creacion");
+
+                    b.Property<DateTime?>("FechaReapertura")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_reapertura");
 
                     b.Property<int>("Mes")
                         .HasColumnType("integer")
                         .HasColumnName("mes");
 
+                    b.Property<string>("MotivoReapertura")
+                        .HasMaxLength(400)
+                        .HasColumnType("character varying(400)")
+                        .HasColumnName("motivo_reapertura");
+
                     b.Property<int>("OrganizacionId")
                         .HasColumnType("integer")
                         .HasColumnName("organizacion_id");
+
+                    b.Property<string>("ReabiertoPorNombre")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("reabierto_por_nombre");
+
+                    b.Property<int?>("ReabiertoPorUsuarioId")
+                        .HasColumnType("integer")
+                        .HasColumnName("reabierto_por_usuario_id");
 
                     b.HasKey("Id")
                         .HasName("pk_periodos");
@@ -513,6 +605,15 @@ namespace Asada.Infraestructura.Migrations
                         .HasColumnType("character varying(150)")
                         .HasColumnName("abonado_nombre");
 
+                    b.Property<string>("AnuladoPorNombre")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("anulado_por_nombre");
+
+                    b.Property<int?>("AnuladoPorUsuarioId")
+                        .HasColumnType("integer")
+                        .HasColumnName("anulado_por_usuario_id");
+
                     b.Property<string>("CategoriaNombre")
                         .IsRequired()
                         .HasMaxLength(60)
@@ -534,6 +635,10 @@ namespace Asada.Infraestructura.Migrations
                         .HasColumnType("character varying(20)")
                         .HasColumnName("estado");
 
+                    b.Property<DateTime?>("FechaAnulacion")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_anulacion");
+
                     b.Property<DateTime>("FechaCreacion")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("fecha_creacion");
@@ -549,6 +654,15 @@ namespace Asada.Infraestructura.Migrations
                     b.Property<DateOnly>("FechaVencimiento")
                         .HasColumnType("date")
                         .HasColumnName("fecha_vencimiento");
+
+                    b.Property<string>("GeneradoPorNombre")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("generado_por_nombre");
+
+                    b.Property<int?>("GeneradoPorUsuarioId")
+                        .HasColumnType("integer")
+                        .HasColumnName("generado_por_usuario_id");
 
                     b.Property<bool>("HuboCambioMedidor")
                         .HasColumnType("boolean")
@@ -576,6 +690,11 @@ namespace Asada.Infraestructura.Migrations
                         .HasPrecision(12, 2)
                         .HasColumnType("numeric(12,2)")
                         .HasColumnName("monto_hidrante");
+
+                    b.Property<string>("MotivoAnulacion")
+                        .HasMaxLength(400)
+                        .HasColumnType("character varying(400)")
+                        .HasColumnName("motivo_anulacion");
 
                     b.Property<string>("MotivosRevision")
                         .HasMaxLength(800)
@@ -702,6 +821,66 @@ namespace Asada.Infraestructura.Migrations
                         .HasDatabaseName("ix_recibo_detalles_recibo_id_orden");
 
                     b.ToTable("recibo_detalles", (string)null);
+                });
+
+            modelBuilder.Entity("Asada.Dominio.Entidades.RegistroAuditoria", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Accion")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("accion");
+
+                    b.Property<string>("Cambios")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("cambios");
+
+                    b.Property<string>("Entidad")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("entidad");
+
+                    b.Property<long>("EntidadId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("entidad_id");
+
+                    b.Property<DateTime>("Fecha")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha");
+
+                    b.Property<int?>("OrganizacionId")
+                        .HasColumnType("integer")
+                        .HasColumnName("organizacion_id");
+
+                    b.Property<int?>("UsuarioId")
+                        .HasColumnType("integer")
+                        .HasColumnName("usuario_id");
+
+                    b.Property<string>("UsuarioNombre")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("usuario_nombre");
+
+                    b.HasKey("Id")
+                        .HasName("pk_auditoria");
+
+                    b.HasIndex("Entidad", "EntidadId")
+                        .HasDatabaseName("ix_auditoria_entidad_entidad_id");
+
+                    b.HasIndex("OrganizacionId", "Fecha")
+                        .HasDatabaseName("ix_auditoria_organizacion_id_fecha");
+
+                    b.ToTable("auditoria", (string)null);
                 });
 
             modelBuilder.Entity("Asada.Dominio.Entidades.SeguimientoLectura", b =>
@@ -1359,6 +1538,15 @@ namespace Asada.Infraestructura.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_recibo_detalles_recibos_recibo_id");
+                });
+
+            modelBuilder.Entity("Asada.Dominio.Entidades.RegistroAuditoria", b =>
+                {
+                    b.HasOne("Asada.Dominio.Entidades.Organizacion", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizacionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_auditoria_organizaciones_organizacion_id");
                 });
 
             modelBuilder.Entity("Asada.Dominio.Entidades.SeguimientoLectura", b =>
