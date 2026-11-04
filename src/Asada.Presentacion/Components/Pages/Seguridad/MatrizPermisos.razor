@@ -1,0 +1,46 @@
+@page "/permisos"
+@attribute [Authorize(Policy = Permisos.Consultar)]
+
+<PageTitle>Permisos por rol</PageTitle>
+
+<h1>Permisos por rol</h1>
+<p class="text-muted">
+    Lo que puede hacer cada rol en el sistema. Cada usuario ve y modifica solo la informacion de su propia ASADA.
+</p>
+
+<div class="table-responsive">
+    <table class="table table-sm align-middle" style="max-width: 60rem">
+        <thead>
+            <tr>
+                <th>Modulo</th>
+                <th>Accion</th>
+                @foreach (var rol in Permisos.RolesAsada)
+                {
+                    <th class="text-center">@rol</th>
+                }
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var p in Permisos.Matriz)
+            {
+                <tr>
+                    <td class="text-muted">@p.Modulo</td>
+                    <td>@p.Accion</td>
+                    @foreach (var rol in Permisos.RolesAsada)
+                    {
+                        <td class="text-center">
+                            @if (p.Roles.Contains(rol))
+                            {
+                                <span class="text-success fw-bold" title="Permitido">&#10003;</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted" title="No permitido">&mdash;</span>
+                            }
+                        </td>
+                    }
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

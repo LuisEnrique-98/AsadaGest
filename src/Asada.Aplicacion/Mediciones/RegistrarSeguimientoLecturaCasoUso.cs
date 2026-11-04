@@ -32,6 +32,9 @@ public class RegistrarSeguimientoLecturaCasoUso(
         if (await repositorio.ExisteLecturaAsync(s.ServicioId, s.Anio, s.Mes, ct))
             return Resultado.Falla("El servicio ya tiene lectura en ese periodo; no necesita anotacion.");
 
+        if (await repositorio.ObtenerPeriodoAsync(s.Anio, s.Mes, ct) is { EstaCerrado: true })
+            return Resultado.Falla($"El periodo {s.Mes:00}/{s.Anio} esta cerrado; no se pueden registrar anotaciones.");
+
         var periodo = await repositorio.ObtenerOCrearPeriodoAsync(s.Anio, s.Mes, ct);
         var existente = await repositorio.ObtenerSeguimientoAsync(s.ServicioId, periodo.Id, ct);
 

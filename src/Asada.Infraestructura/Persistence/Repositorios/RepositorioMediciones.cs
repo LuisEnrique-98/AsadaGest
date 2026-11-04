@@ -5,7 +5,6 @@ using Asada.Dominio.Entidades;
 using Asada.Dominio.Enums;
 using Asada.Dominio.Reglas;
 using Microsoft.EntityFrameworkCore;
-using Npgsql;
 
 namespace Asada.Infraestructura.Persistence.Repositorios;
 
@@ -35,26 +34,61 @@ public class RepositorioMediciones(AsadaDbContext db, IProveedorOrganizacion pro
         await db.SaveChangesAsync(ct);
     }
 
-    public async Task<Periodo> ObtenerOCrearPeriodoAsync(int anio, int mes, CancellationToken ct = default)
-    {
-        var periodo = await db.Periodos.FirstOrDefaultAsync(p => p.Anio == anio && p.Mes == mes, ct);
-        if (periodo is not null) return periodo;
+    public Task<Periodo> ObtenerOCrearPeriodoAsync(int anio, int mes, CancellationToken ct = default)
+        => RepositorioPeriodos.ObtenerOCrearAsync(db, proveedorOrganizacion, anio, mes, ct);
 
-        var organizacionId = proveedorOrganizacion.OrganizacionId
-            ?? throw new InvalidOperationException("Solo un usuario de una ASADA puede crear periodos.");
-        try
-        {
-            periodo = new Periodo { OrganizacionId = organizacionId, Anio = anio, Mes = mes };
-            db.Periodos.Add(periodo);
-            await db.SaveChangesAsync(ct);
-            return periodo;
-        }
-        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
-        {
-            // Otro usuario creo el mismo periodo al mismo tiempo: se descarta el nuestro y se usa el suyo.
-            db.Entry(periodo!).State = EntityState.Detached;
-            return await db.Periodos.FirstAsync(p => p.Anio == anio && p.Mes == mes, ct);
-        }
+    public Task<Periodo?> ObtenerPeriodoAsync(int anio, int mes, CancellationToken ct = default)
+        => db.Periodos.FirstOrDefaultAsync(p => p.Anio == anio && p.Mes == mes, ct);
+
+    public Task<Periodo?> ObtenerPeriodoPorIdAsync(int periodoId, CancellationToken ct = default)
+        => db.Periodos.FirstOrDefaultAsync(p => p.Id == periodoId, ct);
+
+    public async Task<decimal> ObtenerPorcentajeConsumoAnormalAsync(CancellationToken ct = default)
+    {
+        var organizacionId = proveedorOrganizacion.OrganizacionId;
+        var porcentaje = await db.Organizaciones
+            .Where(o => o.Id == organizacionId)
+            .Select(o => (decimal?)o.PorcentajeConsumoAnormal)
+            .FirstOrDefaultAsync(ct);
+        return porcentaje ?? ReglasConsumoAnormal.PorcentajeUmbralPorDefecto;
+    }
+
+    // Las lecturas anuladas nunca aparecen aqui: el filtro global de Medicion las excluye.
+    public async Task<LecturaAnterior?> ObtenerLecturaAnteriorAAsync(int servicioId, int anio, int mes, CancellationToken ct = default)
+    {
+        var fila = await (
+            from m in db.Mediciones
+            join p in db.Periodos on m.PeriodoId equals p.Id
+            where m.ServicioId == servicioId && (p.Anio < anio || (p.Anio == anio && p.Mes < mes))
+            orderby p.Anio descending, p.Mes descending
+            select new { m.Lectura, m.MedidorId, p.Anio, p.Mes, m.FechaLectura })
+            .FirstOrDefaultAsync(ct);
+
+        return fila is null
+            ? null
+            : new LecturaAnterior(fila.Lectura, fila.MedidorId, fila.Anio, fila.Mes, fila.FechaLectura);
+    }
+
+    public async Task<IReadOnlyList<decimal>> ObtenerConsumosAnterioresAAsync(int servicioId, int anio, int mes, int cantidad, CancellationToken ct = default)
+        => await (
+            from m in db.Mediciones
+            join p in db.Periodos on m.PeriodoId equals p.Id
+            where m.ServicioId == servicioId && (p.Anio < anio || (p.Anio == anio && p.Mes < mes))
+            orderby p.Anio descending, p.Mes descending
+            select m.Consumo)
+            .Take(cantidad)
+            .ToListAsync(ct);
+
+    public Task<Medicion?> ObtenerMedicionAsync(int medicionId, CancellationToken ct = default)
+        => db.Mediciones.FirstOrDefaultAsync(m => m.Id == medicionId, ct);
+
+    public async Task<ReciboDeLectura?> ObtenerReciboEmitidoDeLecturaAsync(int medicionId, CancellationToken ct = default)
+    {
+        var recibo = await db.Recibos.AsNoTracking()
+            .Where(r => r.MedicionId == medicionId && r.Estado == EstadoRecibo.Emitido)
+            .Select(r => new { r.Id, r.Numero })
+            .FirstOrDefaultAsync(ct);
+        return recibo is null ? null : new ReciboDeLectura(recibo.Id, recibo.Numero);
     }
 
     public async Task<LecturaAnterior?> ObtenerUltimaLecturaAsync(int servicioId, CancellationToken ct = default)
@@ -132,7 +166,7 @@ public class RepositorioMediciones(AsadaDbContext db, IProveedorOrganizacion pro
             from m in db.Mediciones
             join p in db.Periodos on m.PeriodoId equals p.Id
             where ids.Contains(m.ServicioId) && p.Anio == anio && p.Mes == mes
-            select new { m.ServicioId, m.FechaLectura, m.Lectura, m.Consumo, m.RequiereRevision, m.MotivosRevision, m.Observaciones })
+            select new { m.ServicioId, m.Id, m.FechaLectura, m.Lectura, m.Consumo, m.RequiereRevision, m.MotivosRevision, m.Observaciones, m.RegistradaPorNombre })
             .ToListAsync(ct);
 
         var seguimientos = await (
@@ -153,7 +187,8 @@ public class RepositorioMediciones(AsadaDbContext db, IProveedorOrganizacion pro
                 medidor?.NumeroSerie,
                 lectura?.FechaLectura, lectura?.Lectura, lectura?.Consumo,
                 lectura?.RequiereRevision ?? false, lectura?.MotivosRevision, lectura?.Observaciones,
-                seguimiento?.Decision, seguimiento?.Nota);
+                seguimiento?.Decision, seguimiento?.Nota,
+                lectura?.Id, lectura?.RegistradaPorNombre);
         }).ToList();
     }
 

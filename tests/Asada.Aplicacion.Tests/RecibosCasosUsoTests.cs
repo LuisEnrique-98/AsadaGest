@@ -21,7 +21,7 @@ public class RecibosCasosUsoTests
         repo.Tarifas.Add(TarifaEjemplo(1, categoriaId: 1, new DateOnly(2025, 1, 1)));
     }
 
-    private GenerarRecibosPeriodoCasoUso Generar => new(repo, org, fecha);
+    private GenerarRecibosPeriodoCasoUso Generar => new(repo, org, fecha, new ProveedorUsuarioFalso());
     private ObtenerFacturacionPeriodoCasoUso Facturacion => new(repo);
 
     private Task<Common.Resultado<GeneracionRecibosDto>> GenerarOctubreAsync()
@@ -168,7 +168,7 @@ public class RecibosCasosUsoTests
 
     [Fact]
     public async Task Generar_Superadministrador_Falla()
-        => Assert.False((await new GenerarRecibosPeriodoCasoUso(repo, new ProveedorOrganizacionFalso(null), fecha)
+        => Assert.False((await new GenerarRecibosPeriodoCasoUso(repo, new ProveedorOrganizacionFalso(null), fecha, new ProveedorUsuarioFalso())
             .EjecutarAsync(new GenerarRecibosSolicitud(2026, 10, Vence))).EsExitoso);
 
     [Fact]

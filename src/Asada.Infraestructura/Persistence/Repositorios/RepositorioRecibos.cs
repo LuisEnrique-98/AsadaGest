@@ -1,4 +1,5 @@
 using Asada.Aplicacion.Recibos;
+using Asada.Aplicacion.Recibos.Dtos;
 using Asada.Dominio.Entidades;
 using Asada.Dominio.Enums;
 using Asada.Dominio.Reglas;
@@ -177,4 +178,25 @@ public class RepositorioRecibos(AsadaDbContext db) : IRepositorioRecibos
 
     public Task<Organizacion?> ObtenerOrganizacionAsync(int organizacionId, CancellationToken ct = default)
         => db.Organizaciones.AsNoTracking().FirstOrDefaultAsync(o => o.Id == organizacionId, ct);
+
+    public async Task<(Recibo Recibo, Periodo Periodo)?> ObtenerReciboParaModificarAsync(int reciboId, CancellationToken ct = default)
+    {
+        var recibo = await db.Recibos.FirstOrDefaultAsync(r => r.Id == reciboId, ct);
+        if (recibo is null) return null;
+
+        var periodo = await db.Periodos.FirstAsync(p => p.Id == recibo.PeriodoId, ct);
+        return (recibo, periodo);
+    }
+
+    public async Task<IReadOnlyList<ReciboAnuladoDto>> ListarAnuladosPeriodoAsync(int anio, int mes, CancellationToken ct = default)
+        => await (
+            from r in db.Recibos.AsNoTracking()
+            join p in db.Periodos on r.PeriodoId equals p.Id
+            where p.Anio == anio && p.Mes == mes && r.Estado == EstadoRecibo.Anulado
+            orderby r.FechaAnulacion descending, r.Id descending
+            select new ReciboAnuladoDto(r.Id, r.Numero, r.AbonadoCodigo, r.AbonadoNombre, r.Total,
+                r.FechaAnulacion, r.AnuladoPorNombre, r.MotivoAnulacion))
+            .ToListAsync(ct);
+
+    public Task GuardarCambiosAsync(CancellationToken ct = default) => db.SaveChangesAsync(ct);
 }

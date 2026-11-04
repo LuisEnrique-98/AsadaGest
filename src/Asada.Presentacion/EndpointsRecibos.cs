@@ -1,6 +1,7 @@
 using Asada.Aplicacion.Common;
 using Asada.Aplicacion.Recibos;
 using Asada.Aplicacion.Recibos.Dtos;
+using Asada.Presentacion.Seguridad;
 
 namespace Asada.Presentacion;
 
@@ -13,7 +14,7 @@ public static class EndpointsRecibos
 {
     public static IEndpointRouteBuilder MapearEndpointsRecibos(this IEndpointRouteBuilder app)
     {
-        var recibos = app.MapGroup("/recibos").RequireAuthorization();
+        var recibos = app.MapGroup("/recibos").RequireAuthorization(Permisos.Consultar);
 
         // PDF de un recibo: /recibos/15/pdf
         recibos.MapGet("/{reciboId:int}/pdf", async (int reciboId, DescargarPdfReciboCasoUso casoUso, HttpContext http, CancellationToken ct)

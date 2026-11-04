@@ -1,7 +1,6 @@
 @page "/servicios/{ServicioId:int}/medidores"
-@attribute [Authorize]
+@attribute [Authorize(Policy = Permisos.Consultar)]
 @using System.ComponentModel.DataAnnotations
-@using Microsoft.AspNetCore.Authorization
 @using Asada.Aplicacion.Common
 
 @inject ObtenerMedidoresServicioCasoUso ObtenerMedidores
@@ -86,7 +85,7 @@ else
     </div>
 }
 
-<AuthorizeView Roles="Administrador,Operador" Context="permiso">
+<AuthorizeView Policy="@Permisos.GestionarMedidores" Context="permiso">
     <div class="row mt-4">
         @if (datos.MedidorActivo is not null && datos.EstadoServicio == EstadoRegistro.Activo)
         {

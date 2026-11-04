@@ -20,7 +20,9 @@ public class Escenario
 
     public InstalarMedidorCasoUso Instalar => new(Repo, Org, Fecha);
     public RetirarMedidorCasoUso Retirar => new(Repo, Fecha);
-    public RegistrarLecturaCasoUso Lectura => new(Repo, Org, Fecha);
+    public ProveedorUsuarioFalso Usuario { get; } = new();
+
+    public RegistrarLecturaCasoUso Lectura => new(Repo, Org, Fecha, Usuario);
     public RegistrarSeguimientoLecturaCasoUso Seguimiento => new(Repo, Org);
     public ObtenerLecturasPeriodoCasoUso LecturasPeriodo => new(Repo, Fecha);
 
@@ -314,7 +316,7 @@ public class RegistrarLecturaCasoUsoTests
 
         Assert.False((await e.Lectura.EjecutarAsync(new RegistrarLecturaSolicitud(e.Servicio.Id, 2026, 13, new DateOnly(2026, 10, 27), 10m, null))).EsExitoso);
         Assert.False((await e.Lectura.EjecutarAsync(new RegistrarLecturaSolicitud(999, 2026, 10, new DateOnly(2026, 10, 27), 10m, null))).EsExitoso);
-        var sinOrg = new RegistrarLecturaCasoUso(e.Repo, new ProveedorOrganizacionFalso(null), e.Fecha);
+        var sinOrg = new RegistrarLecturaCasoUso(e.Repo, new ProveedorOrganizacionFalso(null), e.Fecha, e.Usuario);
         Assert.False((await sinOrg.EjecutarAsync(new RegistrarLecturaSolicitud(e.Servicio.Id, 2026, 10, new DateOnly(2026, 10, 27), 10m, null))).EsExitoso);
     }
 }

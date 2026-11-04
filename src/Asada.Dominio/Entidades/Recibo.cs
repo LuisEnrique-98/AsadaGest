@@ -1,4 +1,5 @@
 using Asada.Dominio.Enums;
+using Asada.Dominio.Reglas;
 
 namespace Asada.Dominio.Entidades;
 
@@ -23,6 +24,7 @@ public class Recibo
     /// <summary>Numero visible, p. ej. "CB-REC-2026-000125".</summary>
     public string Numero { get; set; } = "";
 
+    /// <summary>Emitido al generarse; Anulado solo por el Administrador, con motivo (Sprint 5).</summary>
     public EstadoRecibo Estado { get; set; } = EstadoRecibo.Emitido;
     public DateOnly FechaEmision { get; set; }
     public DateOnly FechaVencimiento { get; set; }
@@ -55,4 +57,27 @@ public class Recibo
     public List<ReciboDetalle> Detalles { get; set; } = [];
 
     public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
+
+    /// <summary>Usuario que genero el recibo (null en recibos anteriores al Sprint 5).</summary>
+    public int? GeneradoPorUsuarioId { get; set; }
+    public string? GeneradoPorNombre { get; set; }
+
+    // Anulacion: el recibo anulado se conserva (con su numero) y el servicio queda libre para
+    // emitirle un recibo nuevo, con otro numero, en el mismo periodo.
+    public DateTime? FechaAnulacion { get; private set; }
+    public int? AnuladoPorUsuarioId { get; private set; }
+    public string? AnuladoPorNombre { get; private set; }
+    public string? MotivoAnulacion { get; private set; }
+
+    public void Anular(string motivo, int? usuarioId, string usuarioNombre, DateTime ahoraUtc)
+    {
+        if (Estado != EstadoRecibo.Emitido) throw new InvalidOperationException("El recibo ya esta anulado.");
+        if (ReglasMotivo.Validar(motivo) is string error) throw new InvalidOperationException(error);
+
+        Estado = EstadoRecibo.Anulado;
+        FechaAnulacion = ahoraUtc;
+        AnuladoPorUsuarioId = usuarioId;
+        AnuladoPorNombre = usuarioNombre;
+        MotivoAnulacion = motivo.Trim();
+    }
 }

@@ -1,5 +1,8 @@
 using Asada.Aplicacion.Abonados;
+using Asada.Aplicacion.Auditoria;
+using Asada.Aplicacion.Configuracion;
 using Asada.Aplicacion.Mediciones;
+using Asada.Aplicacion.Periodos;
 using Asada.Aplicacion.Recibos;
 using Asada.Aplicacion.Tarifas;
 
@@ -45,6 +48,18 @@ public static class CasosDeUsoServiceCollectionExtensions
         // Sprint 4: recibos en PDF.
         servicios.AddScoped<DescargarPdfReciboCasoUso>();
         servicios.AddScoped<DescargarPdfRecibosPeriodoCasoUso>();
+
+        // Sprint 5a: anulaciones, correcciones, cierre de periodo, configuracion y auditoria.
+        servicios.AddScoped<ObtenerLecturaCasoUso>();
+        servicios.AddScoped<CorregirLecturaCasoUso>();
+        servicios.AddScoped<AnularLecturaCasoUso>();
+        servicios.AddScoped<AnularReciboCasoUso>();
+        servicios.AddScoped<ObtenerCierrePeriodoCasoUso>();
+        servicios.AddScoped<CerrarPeriodoCasoUso>();
+        servicios.AddScoped<ReabrirPeriodoCasoUso>();
+        servicios.AddScoped<ObtenerConfiguracionCasoUso>();
+        servicios.AddScoped<ActualizarConfiguracionCasoUso>();
+        servicios.AddScoped<BuscarAuditoriaCasoUso>();
         return servicios;
     }
 }

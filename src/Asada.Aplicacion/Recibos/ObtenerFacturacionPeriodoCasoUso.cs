@@ -1,6 +1,7 @@
 using Asada.Aplicacion.Common;
 using Asada.Aplicacion.Recibos.Dtos;
 using Asada.Dominio.Entidades;
+using Asada.Dominio.Enums;
 using Asada.Dominio.Reglas;
 
 namespace Asada.Aplicacion.Recibos;
@@ -24,6 +25,8 @@ public class ObtenerFacturacionPeriodoCasoUso(IRepositorioRecibos repositorio)
 
         var servicios = await repositorio.ListarServiciosDelPeriodoAsync(anio, mes, ct);
         var tarifas = await repositorio.ListarTarifasAsync(ct);
+        var periodo = await repositorio.ObtenerPeriodoAsync(anio, mes, ct);
+        var anulados = await repositorio.ListarAnuladosPeriodoAsync(anio, mes, ct);
 
         var filas = servicios.Select(s =>
         {
@@ -34,7 +37,8 @@ public class ObtenerFacturacionPeriodoCasoUso(IRepositorioRecibos repositorio)
                 s.ReciboId, s.ReciboNumero, s.ReciboTotal);
         }).ToList();
 
-        return Resultado<FacturacionPeriodoDto>.Ok(new FacturacionPeriodoDto(anio, mes, filas));
+        return Resultado<FacturacionPeriodoDto>.Ok(new FacturacionPeriodoDto(
+            anio, mes, filas, periodo?.Estado ?? EstadoPeriodo.Abierto, anulados));
     }
 
     internal static Tarifa? TarifaDelPeriodo(IReadOnlyList<Tarifa> tarifas, int? categoriaId, int anio, int mes)
