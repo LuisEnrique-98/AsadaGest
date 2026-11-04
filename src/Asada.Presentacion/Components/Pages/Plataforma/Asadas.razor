@@ -1,0 +1,67 @@
+@page "/plataforma/asadas"
+@attribute [Authorize(Policy = Permisos.AdministrarPlataforma)]
+
+@inject ListarOrganizacionesCasoUso ListarOrganizaciones
+
+<PageTitle>ASADAs de la plataforma</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-1">
+    <h1 class="mb-0">ASADAs</h1>
+    <a class="btn btn-primary" href="plataforma/asadas/nueva">Registrar ASADA</a>
+</div>
+<p class="text-muted">
+    Cada ASADA trabaja con sus propios datos: sus usuarios no ven nada de las demas. Desde aqui se registran ASADAs nuevas
+    y se atienden sus usuarios (por ejemplo, restablecer la contrasena del Administrador).
+</p>
+
+@if (error is not null)
+{
+    <div class="alert alert-danger">@error</div>
+    return;
+}
+
+@if (asadas is null)
+{
+    <p><em>Cargando...</em></p>
+    return;
+}
+
+<div class="table-responsive">
+    <table class="table table-hover align-middle">
+        <thead>
+            <tr>
+                <th>Codigo</th>
+                <th>Nombre</th>
+                <th>Estado</th>
+                <th class="text-end">Usuarios activos</th>
+                <th>Registrada</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var a in asadas)
+            {
+                <tr>
+                    <td><strong>@a.Codigo</strong></td>
+                    <td>@a.Nombre</td>
+                    <td><span class="badge @(a.Estado == EstadoOrganizacion.Activa ? "bg-success" : "bg-secondary")">@Etiquetas.De(a.Estado)</span></td>
+                    <td class="text-end">@a.UsuariosActivos</td>
+                    <td class="text-nowrap">@Etiquetas.FechaHora(a.FechaCreacion)</td>
+                    <td class="text-end"><a class="btn btn-sm btn-outline-secondary" href="usuarios?asada=@a.Id">Usuarios</a></td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    private IReadOnlyList<OrganizacionResumenDto>? asadas;
+    private string? error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var resultado = await ListarOrganizaciones.EjecutarAsync();
+        asadas = resultado.Valor;
+        error = resultado.EsExitoso ? null : string.Join(" ", resultado.Errores);
+    }
+}

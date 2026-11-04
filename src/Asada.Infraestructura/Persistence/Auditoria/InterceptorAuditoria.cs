@@ -25,7 +25,8 @@ namespace Asada.Infraestructura.Persistence.Auditoria;
 /// entre los dos pasos.
 ///
 /// No se auditan: las tablas de ASP.NET Core Identity (el inicio de sesion cambia contadores y
-/// sellos de seguridad en cada acceso; la gestion de usuarios se audita aparte en el Sprint 5b),
+/// sellos de seguridad en cada acceso; la gestion de usuarios y los inicios de sesion los anotan
+/// a mano Identidad/GestorUsuarios y Identidad/SignInManagerAsada, con el detalle de cada accion),
 /// los tramos de tarifa y las lineas de recibo (nunca cambian y se ven a traves de su tarifa o su
 /// recibo) ni la propia bitacora.
 /// </summary>

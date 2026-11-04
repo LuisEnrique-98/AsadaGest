@@ -12,6 +12,11 @@ namespace Asada.Presentacion.Seguridad;
 ///
 /// Decisiones del 13 de octubre de 2026: anular recibos, corregir o anular lecturas y cerrar o
 /// reabrir periodos es solo del Administrador.
+///
+/// Sprint 5b (4 de noviembre de 2026): GestionarUsuarios es del Administrador de cada ASADA y tambien
+/// del Superadministrador (que entra a los usuarios de una ASADA elegida, p. ej. para restablecer la
+/// contrasena de su unico Administrador). AdministrarPlataforma (registrar ASADAs) es solo del
+/// Superadministrador y no aparece en la matriz, que muestra los roles de una ASADA.
 /// </summary>
 public static class Permisos
 {
@@ -28,12 +33,15 @@ public static class Permisos
     public const string CerrarPeriodos = "CerrarPeriodos";
     public const string VerAuditoria = "VerAuditoria";
     public const string ConfigurarAsada = "ConfigurarAsada";
+    public const string GestionarUsuarios = "GestionarUsuarios";
+    public const string AdministrarPlataforma = "AdministrarPlataforma";
 
     public sealed record Permiso(string Nombre, string Modulo, string Accion, IReadOnlyList<string> Roles);
 
     private static readonly string[] Todos = [NombresRol.Administrador, NombresRol.Operador, NombresRol.Consulta];
     private static readonly string[] AdministradorYOperador = [NombresRol.Administrador, NombresRol.Operador];
     private static readonly string[] SoloAdministrador = [NombresRol.Administrador];
+    private static readonly string[] AdministradorYSuperadministrador = [NombresRol.Administrador, NombresRol.Superadministrador];
 
     /// <summary>Roles de una ASADA, en el orden de las columnas de la matriz.</summary>
     public static readonly IReadOnlyList<string> RolesAsada = Todos;
@@ -53,6 +61,7 @@ public static class Permisos
         new(CerrarPeriodos, "Periodos", "Cerrar y reabrir un periodo (reabrir con motivo)", SoloAdministrador),
         new(VerAuditoria, "Seguridad", "Consultar la bitacora de auditoria", SoloAdministrador),
         new(ConfigurarAsada, "Seguridad", "Datos de la ASADA y umbral de consumo anormal", SoloAdministrador),
+        new(GestionarUsuarios, "Seguridad", "Crear y editar usuarios, restablecer contrasenas y desbloquear", AdministradorYSuperadministrador),
     ];
 
     /// <summary>Registra una politica de autorizacion por cada permiso de la matriz.</summary>
@@ -60,6 +69,7 @@ public static class Permisos
     {
         foreach (var permiso in Matriz)
             opciones.AddPolicy(permiso.Nombre, politica => politica.RequireRole(permiso.Roles));
+        opciones.AddPolicy(AdministrarPlataforma, politica => politica.RequireRole(NombresRol.Superadministrador));
         return opciones;
     }
 }

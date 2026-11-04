@@ -8,8 +8,9 @@
 
 <h1>Auditoria</h1>
 <p class="text-muted">
-    Cada alta o cambio en abonados, servicios, medidores, lecturas, periodos, tarifas, recibos y datos de la ASADA queda
-    anotado aqui: quien, cuando y que cambio. Los registros no se pueden modificar ni borrar.
+    Cada alta o cambio en abonados, servicios, medidores, lecturas, periodos, tarifas, recibos, usuarios y datos de la ASADA
+    queda anotado aqui: quien, cuando y que cambio. Tambien cada inicio de sesion, cada intento fallido y cada bloqueo de
+    una cuenta. Los registros no se pueden modificar ni borrar.
 </p>
 
 @* Filtros con un formulario GET: la pagina es SSR y los filtros viajan en la URL. *@
@@ -88,7 +89,7 @@
                         <a href="@EnlaceRegistro(r.Entidad, r.EntidadId)">@Etiquetas.Entidad(r.Entidad) #@r.EntidadId</a>
                     </td>
                     <td>
-                        @if (r.Accion == AccionAuditoria.Modificacion)
+                        @if (r.Accion is not (AccionAuditoria.Creacion or AccionAuditoria.Eliminacion))
                         {
                             <ul class="list-unstyled small mb-0">
                                 @foreach (var c in r.Cambios)
@@ -168,6 +169,7 @@
         "Recibo" => $"recibos/{id}",
         "Tarifa" => $"tarifas/{id}",
         "Servicio" => $"servicios/{id}/medidores",
+        "Usuario" => $"usuarios/{id}",
         _ => $"auditoria?entidad={entidad}&id={id}",
     };
 }

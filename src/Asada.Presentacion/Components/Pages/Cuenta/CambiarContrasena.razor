@@ -1,0 +1,93 @@
+@page "/cuenta/cambiar-contrasena"
+@attribute [Authorize]
+@using System.ComponentModel.DataAnnotations
+
+@inject CambiarContrasenaPropiaCasoUso CambiarContrasenaPropia
+@inject IRenovadorSesion RenovadorSesion
+@inject NavigationManager Navegacion
+
+<PageTitle>Cambiar contrasena</PageTitle>
+
+<div class="row">
+    <div class="col-md-8 col-lg-5">
+        <h1>Cambiar contrasena</h1>
+
+        @if (Obligatorio)
+        {
+            <div class="alert alert-warning">
+                Esta usando una contrasena temporal. Para continuar, elija una contrasena propia.
+            </div>
+        }
+        @if (Ok == "1")
+        {
+            <div class="alert alert-success">Contrasena cambiada.</div>
+        }
+
+        @* Sin <AntiforgeryToken />: el EditForm ya incluye el suyo. *@
+        <EditForm Model="Modelo" method="post" OnValidSubmit="CambiarAsync" FormName="cambiar-contrasena">
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" role="alert" />
+            @if (errores.Count > 0)
+            {
+                <div class="alert alert-danger" role="alert">
+                    <ul class="mb-0">@foreach (var e in errores) { <li>@e</li> }</ul>
+                </div>
+            }
+
+            <div class="mb-3">
+                <label for="actual" class="form-label">Contrasena actual</label>
+                <InputText id="actual" type="password" class="form-control" @bind-Value="Modelo.Actual" autocomplete="current-password" />
+                @if (Obligatorio)
+                {
+                    <div class="form-text">La temporal que le entregaron.</div>
+                }
+            </div>
+            <div class="mb-3">
+                <label for="nueva" class="form-label">Contrasena nueva</label>
+                <InputText id="nueva" type="password" class="form-control" @bind-Value="Modelo.Nueva" autocomplete="new-password" />
+                <div class="form-text">@ReglasContrasena.Descripcion Una frase facil de recordar sirve, por ejemplo "rio celeste 2026".</div>
+            </div>
+            <div class="mb-3">
+                <label for="confirmacion" class="form-label">Repita la contrasena nueva</label>
+                <InputText id="confirmacion" type="password" class="form-control" @bind-Value="Modelo.Confirmacion" autocomplete="new-password" />
+            </div>
+
+            <button type="submit" class="btn btn-primary">Cambiar contrasena</button>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    [CascadingParameter] private HttpContext? Contexto { get; set; }
+    [Parameter, SupplyParameterFromQuery(Name = "ok")] public string? Ok { get; set; }
+
+    [SupplyParameterFromForm(FormName = "cambiar-contrasena")]
+    private ModeloCambio Modelo { get; set; } = new();
+
+    private List<string> errores = [];
+
+    private bool Obligatorio => Contexto is not null && CambioContrasenaObligatorio.DebeCambiar(Contexto);
+
+    private async Task CambiarAsync()
+    {
+        var resultado = await CambiarContrasenaPropia.EjecutarAsync(
+            new CambiarContrasenaSolicitud(Modelo.Actual, Modelo.Nueva, Modelo.Confirmacion));
+        if (!resultado.EsExitoso)
+        {
+            errores = resultado.Errores.ToList();
+            return;
+        }
+
+        // Nueva cookie: sin la marca de contrasena temporal y con el sello de seguridad nuevo.
+        var eraObligatorio = Obligatorio;
+        await RenovadorSesion.RenovarAsync();
+        Navegacion.NavigateTo(eraObligatorio ? "/" : "/cuenta/cambiar-contrasena?ok=1", forceLoad: true);
+    }
+
+    private sealed class ModeloCambio
+    {
+        [Required(ErrorMessage = "Indique su contrasena actual.")] public string? Actual { get; set; }
+        [Required(ErrorMessage = "Indique la contrasena nueva.")] public string? Nueva { get; set; }
+        [Required(ErrorMessage = "Repita la contrasena nueva.")] public string? Confirmacion { get; set; }
+    }
+}

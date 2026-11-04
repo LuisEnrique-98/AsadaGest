@@ -1,16 +1,18 @@
+using Asada.Aplicacion.Usuarios;
+
 namespace Asada.Infraestructura.Identidad;
 
 /// <summary>
-/// Nombres de rol reconocidos por la plataforma (SRS &#167;23, matriz de permisos).
-/// Centralizados aqui para no repetir strings literales al sembrar datos o al
-/// escribir politicas de autorizacion en Sprint 5.
+/// Nombres de rol reconocidos por la plataforma (SRS &#167;23, matriz de permisos). Desde el Sprint 5b
+/// son los mismos de Asada.Aplicacion.Usuarios.RolesUsuario (los casos de uso de usuarios los
+/// necesitan); aqui se conservan para no cambiar el codigo que ya los usaba.
 /// </summary>
 public static class NombresRol
 {
-    public const string Superadministrador = "Superadministrador";
-    public const string Administrador = "Administrador";
-    public const string Operador = "Operador";
-    public const string Consulta = "Consulta";
+    public const string Superadministrador = RolesUsuario.Superadministrador;
+    public const string Administrador = RolesUsuario.Administrador;
+    public const string Operador = RolesUsuario.Operador;
+    public const string Consulta = RolesUsuario.Consulta;
 
     public static readonly IReadOnlyList<string> Todos =
     [

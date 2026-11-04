@@ -17,5 +17,40 @@ services:
       timeout: 5s
       retries: 10
 
+  # Sprint 5b: respaldos automaticos de la base. Un pg_dump diario a RESPALDO_HORA (y uno al arrancar
+  # si hoy todavia no hay), una copia semanal, retencion por cantidad y una prueba de restauracion
+  # semanal. Los archivos quedan en la carpeta ./respaldos del proyecto (fuera de Git). Ver
+  # scripts/respaldos/ y la seccion "Respaldos" del README.
+  respaldo:
+    image: postgres:16
+    container_name: asada_respaldo
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGDATABASE: asada_gestion
+      PGUSER: asada
+      PGPASSWORD: asada_dev_local
+      # Hora de Costa Rica (UTC-6, sin horario de verano). Formato POSIX: no depende de tzdata.
+      TZ: CST6
+      RESPALDO_HORA: "02:30"
+      RESPALDO_DIARIOS: "30"
+      RESPALDO_SEMANALES: "12"
+    volumes:
+      - ./scripts/respaldos:/scripts:ro
+      - ./respaldos:/respaldos
+    # Copia los scripts a /opt/respaldos quitando los fines de linea de Windows (CRLF): asi funcionan
+    # aunque Git los haya escrito con CRLF en una PC con Windows. Los comandos manuales usan esa copia.
+    entrypoint:
+      - bash
+      - -c
+      - |
+        mkdir -p /opt/respaldos
+        for f in /scripts/*.sh; do tr -d '\r' < "$$f" > "/opt/respaldos/$${f##*/}"; done
+        exec bash /opt/respaldos/ciclo-respaldos.sh
+
 volumes:
   asada_postgres_data:

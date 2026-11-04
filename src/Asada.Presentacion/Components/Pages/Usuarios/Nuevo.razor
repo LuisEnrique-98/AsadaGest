@@ -1,0 +1,80 @@
+@page "/usuarios/nuevo"
+@attribute [Authorize(Policy = Permisos.GestionarUsuarios)]
+@using System.ComponentModel.DataAnnotations
+
+@inject CrearUsuarioCasoUso CrearUsuario
+
+<PageTitle>Nuevo usuario</PageTitle>
+
+<p><a href="@Enlaces.Usuarios("usuarios", Asada)">&larr; Volver a usuarios</a></p>
+
+<h1>Nuevo usuario</h1>
+
+@if (creado is not null)
+{
+    <ContrasenaTemporal Titulo="@($"Usuario {creado.Nombre} creado")" Correo="@creado.Correo" Contrasena="@creado.ContrasenaTemporal" />
+    <p>
+        <a class="btn btn-primary" href="@Enlaces.Usuarios($"usuarios/{creado.UsuarioId}", Asada)">Ver el usuario</a>
+        <a class="btn btn-outline-secondary" href="@Enlaces.Usuarios("usuarios/nuevo", Asada)">Crear otro</a>
+    </p>
+    return;
+}
+
+<div class="row">
+    <div class="col-lg-7">
+        @* Sin <AntiforgeryToken />: el EditForm ya incluye el suyo. *@
+        <EditForm Model="Modelo" method="post" OnValidSubmit="CrearAsync" FormName="nuevo-usuario">
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" role="alert" />
+            @if (errores.Count > 0)
+            {
+                <div class="alert alert-danger" role="alert">
+                    <ul class="mb-0">@foreach (var e in errores) { <li>@e</li> }</ul>
+                </div>
+            }
+
+            <div class="mb-3">
+                <label for="nombre" class="form-label">Nombre completo</label>
+                <InputText id="nombre" class="form-control" @bind-Value="Modelo.Nombre" />
+            </div>
+            <div class="mb-3">
+                <label for="correo" class="form-label">Correo</label>
+                <InputText id="correo" type="email" class="form-control" @bind-Value="Modelo.Correo" autocomplete="off" />
+                <div class="form-text">Es el usuario para iniciar sesion. No se envia ningun correo: la contrasena temporal se muestra aqui.</div>
+            </div>
+            <SelectorRol Id="rol" @bind-Valor="Modelo.Rol" />
+
+            <button type="submit" class="btn btn-primary">Crear usuario</button>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    [Parameter, SupplyParameterFromQuery(Name = "asada")] public int? Asada { get; set; }
+    [Parameter, SupplyParameterFromQuery(Name = "rol")] public string? RolSugerido { get; set; }
+
+    [SupplyParameterFromForm(FormName = "nuevo-usuario")]
+    private ModeloUsuario Modelo { get; set; } = new();
+
+    private UsuarioCreadoDto? creado;
+    private List<string> errores = [];
+
+    protected override void OnInitialized()
+    {
+        if (Modelo.Rol is null && RolesUsuario.EsRolDeAsada(RolSugerido)) Modelo.Rol = RolSugerido;
+    }
+
+    private async Task CrearAsync()
+    {
+        var resultado = await CrearUsuario.EjecutarAsync(new CrearUsuarioSolicitud(Asada, Modelo.Nombre, Modelo.Correo, Modelo.Rol));
+        if (resultado.EsExitoso) creado = resultado.Valor;
+        else errores = resultado.Errores.ToList();
+    }
+
+    private sealed class ModeloUsuario
+    {
+        [Required(ErrorMessage = "Indique el nombre.")] public string? Nombre { get; set; }
+        [Required(ErrorMessage = "Indique el correo.")] public string? Correo { get; set; }
+        [Required(ErrorMessage = "Elija el rol.")] public string? Rol { get; set; }
+    }
+}

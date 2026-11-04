@@ -9,8 +9,9 @@ namespace Asada.Infraestructura.Persistence.Seed;
 
 /// <summary>
 /// Datos iniciales para poder arrancar a desarrollar: los cuatro roles de la plataforma
-/// (SRS &#167;23), la organizacion Cuatro Bocas, y un usuario Administrador para poder iniciar
-/// sesion por primera vez. Se llama desde Program.cs solo en entorno de Desarrollo.
+/// (SRS &#167;23), la organizacion Cuatro Bocas, un usuario Administrador para poder iniciar
+/// sesion por primera vez y (Sprint 5b) un Superadministrador de la plataforma, sin ASADA, que
+/// registra las ASADAs nuevas. Se llama desde Program.cs solo en entorno de Desarrollo.
 ///
 /// Es seguro llamarlo en cada arranque: cada paso verifica primero si el dato ya existe
 /// (usando IgnoreQueryFilters, porque durante el seed todavia no hay ningun usuario
@@ -24,6 +25,10 @@ public static class SeedInicial
     // Solo para desarrollo local. Antes de usar datos reales, este usuario debe cambiar su
     // contrasena (o eliminarse) -- ver la nota de seguridad en el README del repositorio.
     public const string ContrasenaAdministradorInicial = "CuatroBocas#2026";
+
+    // Sprint 5b. Igual que el anterior: solo para desarrollo local.
+    public const string CorreoSuperadministradorInicial = "superadmin@plataforma.test";
+    public const string ContrasenaSuperadministradorInicial = "Plataforma#2026";
 
     public static async Task EjecutarAsync(IServiceProvider servicios)
     {
@@ -81,6 +86,33 @@ public static class SeedInicial
             }
 
             await userManager.AddToRoleAsync(administrador, NombresRol.Administrador);
+        }
+
+        var yaExisteSuperadministrador = await db.Users
+            .IgnoreQueryFilters()
+            .AnyAsync(u => u.Email == CorreoSuperadministradorInicial);
+
+        if (!yaExisteSuperadministrador)
+        {
+            var superadministrador = new Usuario
+            {
+                UserName = CorreoSuperadministradorInicial,
+                Email = CorreoSuperadministradorInicial,
+                EmailConfirmed = true,
+                Nombre = "Superadministrador de la plataforma",
+                OrganizacionId = null,
+                Estado = EstadoUsuario.Activo,
+            };
+
+            var resultado = await userManager.CreateAsync(superadministrador, ContrasenaSuperadministradorInicial);
+            if (!resultado.Succeeded)
+            {
+                throw new InvalidOperationException(
+                    "No se pudo crear el Superadministrador inicial: " +
+                    string.Join("; ", resultado.Errors.Select(e => e.Description)));
+            }
+
+            await userManager.AddToRoleAsync(superadministrador, NombresRol.Superadministrador);
         }
     }
 }

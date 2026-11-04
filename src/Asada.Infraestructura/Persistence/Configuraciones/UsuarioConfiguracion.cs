@@ -17,6 +17,9 @@ public class UsuarioConfiguracion : IEntityTypeConfiguration<Usuario>
             .HasMaxLength(20)
             .IsRequired();
 
+        // Sprint 5b: los usuarios que ya existian al migrar no tienen contrasena temporal.
+        builder.Property(u => u.DebeCambiarContrasena).HasDefaultValue(false).IsRequired();
+
         // OrganizacionId es null unicamente para el Superadministrador; por eso la relacion
         // es opcional (no HasRequired) y el borrado es Restrict: nunca se debe poder eliminar
         // una organizacion que todavia tiene usuarios asignados.

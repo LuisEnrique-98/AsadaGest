@@ -1,4 +1,5 @@
 using Asada.Dominio.Entidades;
+using Asada.Dominio.Enums;
 using Microsoft.AspNetCore.Identity;
 
 namespace Asada.Infraestructura.Identidad;
@@ -29,6 +30,13 @@ public class Usuario : IdentityUser<int>
     public EstadoUsuario Estado { get; set; } = EstadoUsuario.Activo;
 
     public DateTime? UltimoAcceso { get; set; }
+
+    /// <summary>
+    /// Sprint 5b: true cuando la contrasena actual es temporal (la genero el sistema al crear el
+    /// usuario o al restablecerla). Mientras sea true, el usuario solo puede entrar a la pagina de
+    /// cambiar contrasena.
+    /// </summary>
+    public bool DebeCambiarContrasena { get; set; }
 
     public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
 }
