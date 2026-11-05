@@ -1,3 +1,4 @@
+using Xunit;
 using Asada.Aplicacion.Auditoria;
 using Asada.Aplicacion.Organizaciones;
 using Asada.Aplicacion.Usuarios;
