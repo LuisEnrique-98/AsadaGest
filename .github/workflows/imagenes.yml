@@ -36,7 +36,7 @@ jobs:
             contexto: despliegue/respaldo
             dockerfile: despliegue/respaldo/Dockerfile
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Nombre de la imagen (en minusculas)
         id: nombre
