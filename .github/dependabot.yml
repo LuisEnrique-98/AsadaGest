@@ -1,0 +1,23 @@
+# Avisos de actualizaciones (Sprint 6a): GitHub abre un PR cuando hay versiones nuevas de los paquetes
+# NuGet, de las imagenes base de Docker o de las acciones de GitHub; las de seguridad llegan aunque sea
+# fuera del horario semanal. Cada PR pasa por la CI antes de integrarlo.
+version: 2
+updates:
+  - package-ecosystem: nuget
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      nuget:
+        patterns: ["*"]
+
+  - package-ecosystem: docker
+    directories: ["/", "/despliegue/respaldo"]
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: monthly

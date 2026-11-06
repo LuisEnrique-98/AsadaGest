@@ -370,6 +370,11 @@ Ubuntu + Docker, HTTPS con Caddy, respaldos fuera del servidor). Resumen:
   `scripts/despliegue/descargar-respaldos.ps1` baja a una PC con Windows los respaldos que falten y verifica su
   SHA-256.
 
+- **Imagenes construidas por GitHub** (`.github/workflows/imagenes.yml`): en cada cambio de `master` se publican
+  `asadagest-app` y `asadagest-respaldo` (amd64 y arm64) en ghcr.io; el servidor descarga la del commit actual y
+  solo construye si no esta. **CI** (`.github/workflows/ci.yml`): compila, prueba y revisa paquetes vulnerables en
+  cada PR. **Dependabot** propone actualizaciones de NuGet, imagenes base y acciones.
+
 En la PC de desarrollo nada cambia: `dotnet run` sigue migrando y sembrando datos de prueba al arrancar.
 
 ## Siguiente paso

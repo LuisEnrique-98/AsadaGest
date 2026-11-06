@@ -6,7 +6,8 @@
 #
 # 1. Si no existe .env, lo crea preguntando la direccion del sitio y el correo del Superadministrador
 #    (la contrasena de la base se genera sola).
-# 2. Construye las imagenes, levanta PostgreSQL, aplica las migraciones y crea el Superadministrador
+# 2. Descarga las imagenes (o las construye), levanta PostgreSQL, aplica las migraciones y crea el
+#    Superadministrador
 #    (su contrasena temporal aparece en pantalla UNA sola vez).
 # 3. Levanta todo: aplicacion, Caddy (HTTPS) y respaldos.
 # Si ya hay un .env, lo respeta (se puede volver a ejecutar sin perder nada). Para actualizaciones
@@ -67,8 +68,10 @@ if [ ! -d "$ruta_respaldos" ]; then
 fi
 
 echo
-echo "== Construyendo las imagenes (la primera vez tarda varios minutos) =="
-docker compose build
+echo "== Imagenes =="
+# shellcheck source=imagenes.sh
+source ./imagenes.sh
+obtener_imagenes
 
 echo
 echo "== Base de datos: migraciones y Superadministrador =="

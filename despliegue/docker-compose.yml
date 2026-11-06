@@ -4,7 +4,9 @@
 #
 # Diferencias con el docker-compose.yml de la raiz (solo para la PC de desarrollo):
 #   - PostgreSQL no publica el puerto 5432: solo lo ven los otros contenedores.
-#   - La aplicacion corre en un contenedor (imagen construida con el Dockerfile de la raiz).
+#   - La aplicacion corre en un contenedor. Su imagen (y la de respaldo) la construye GitHub en cada cambio
+#     de master y el servidor la descarga de ghcr.io con la etiqueta del commit (IMAGEN_ETIQUETA, la fija
+#     actualizar.sh en .env). Si no esta disponible, se construye aqui con el Dockerfile de la raiz.
 #   - Caddy recibe el trafico en los puertos 80/443 y pone el HTTPS.
 #   - El contenedor de respaldo trae rclone para copiar los respaldos fuera del servidor.
 name: asada
@@ -34,10 +36,10 @@ services:
     <<: *registro
 
   app:
+    image: ${IMAGEN_REGISTRO:-ghcr.io/luisenrique-98}/asadagest-app:${IMAGEN_ETIQUETA:-latest}
     build:
       context: ..
       dockerfile: Dockerfile
-    image: asadagest-app:local
     restart: unless-stopped
     depends_on:
       postgres:
@@ -68,8 +70,8 @@ services:
     <<: *registro
 
   respaldo:
+    image: ${IMAGEN_REGISTRO:-ghcr.io/luisenrique-98}/asadagest-respaldo:${IMAGEN_ETIQUETA:-latest}
     build: ./respaldo
-    image: asadagest-respaldo:local
     restart: unless-stopped
     depends_on:
       postgres:

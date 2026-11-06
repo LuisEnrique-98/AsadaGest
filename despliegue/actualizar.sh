@@ -4,7 +4,8 @@
 #   cd /opt/asadagest/despliegue && bash actualizar.sh
 #
 # 1. Descarga los cambios de GitHub (solo avanza; si hay cambios locales, se detiene).
-# 2. Construye las imagenes nuevas (el sistema sigue funcionando mientras tanto).
+# 2. Descarga las imagenes de esa version, construidas por GitHub (o las construye aqui si no estan).
+#    El sistema sigue funcionando mientras tanto.
 # 3. Hace un respaldo de la base ANTES de migrar (por si la migracion sale mal).
 # 4. Aplica las migraciones pendientes.
 # 5. Reemplaza los contenedores (la aplicacion se interrumpe unos segundos; las sesiones se mantienen).
@@ -26,8 +27,10 @@ else
 fi
 
 echo
-echo "== 2/5 Construyendo imagenes =="
-docker compose build
+echo "== 2/5 Imagenes de la nueva version =="
+# shellcheck source=imagenes.sh
+source ./imagenes.sh
+obtener_imagenes
 
 echo
 echo "== 3/5 Respaldo previo =="
@@ -49,7 +52,8 @@ echo "== 5/5 Reemplazando contenedores =="
 docker compose up -d --remove-orphans
 # El contenedor de respaldo copia los scripts al arrancar: se reinicia por si cambiaron.
 docker compose restart respaldo
-docker image prune -f > /dev/null
+# Borra imagenes viejas sin usar (se conservan las de los ultimos 30 dias, por si hay que volver atras).
+docker image prune -af --filter "until=720h" > /dev/null
 
 sleep 10
 docker compose ps

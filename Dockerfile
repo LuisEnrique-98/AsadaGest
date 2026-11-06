@@ -1,8 +1,12 @@
-# Imagen de la aplicacion para el servidor (Sprint 6a). La construye despliegue/docker-compose.yml
-# (docker compose build app); no hace falta tener .NET instalado en el servidor.
+# Imagen de la aplicacion para el servidor (Sprint 6a). La construye GitHub Actions en cada cambio de
+# master (.github/workflows/imagenes.yml) para amd64 y arm64, y el servidor solo la descarga. Tambien se
+# puede construir en el servidor (docker compose build app); no hace falta tener .NET instalado alli.
 #
-# Etapa 1: compilar y publicar con el SDK de .NET 8.
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS compilacion
+# Etapa 1: compilar y publicar con el SDK de .NET 8. El SDK corre en la arquitectura de la maquina que
+# construye (BUILDPLATFORM) y compila para la del servidor (TARGETARCH): asi la imagen arm64 (Oracle
+# Ampere) se genera en GitHub sin emular un procesador Arm, que seria muy lento.
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:8.0 AS compilacion
+ARG TARGETARCH
 WORKDIR /fuente
 
 # Primero solo los .csproj: mientras no cambien los paquetes, Docker reutiliza la descarga de NuGet
@@ -11,11 +15,15 @@ COPY src/Asada.Dominio/Asada.Dominio.csproj src/Asada.Dominio/
 COPY src/Asada.Aplicacion/Asada.Aplicacion.csproj src/Asada.Aplicacion/
 COPY src/Asada.Infraestructura/Asada.Infraestructura.csproj src/Asada.Infraestructura/
 COPY src/Asada.Presentacion/Asada.Presentacion.csproj src/Asada.Presentacion/
-RUN dotnet restore src/Asada.Presentacion/Asada.Presentacion.csproj
+# amd64 -> x64 (nombre de .NET); arm64 queda igual. Sin TARGETARCH (docker build sin buildx), x64.
+RUN arquitectura="$(echo "${TARGETARCH:-amd64}" | sed 's/amd64/x64/')" \
+    && echo "$arquitectura" > /tmp/arquitectura \
+    && dotnet restore src/Asada.Presentacion/Asada.Presentacion.csproj --arch "$arquitectura"
 
 COPY src/ src/
 RUN dotnet publish src/Asada.Presentacion/Asada.Presentacion.csproj \
-        --configuration Release --no-restore --output /publicado /p:UseAppHost=false
+        --configuration Release --no-restore --arch "$(cat /tmp/arquitectura)" --self-contained false \
+        --output /publicado /p:UseAppHost=false
 
 # Etapa 2: solo el runtime de ASP.NET Core (imagen mas liviana, sin el SDK ni el codigo fuente).
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final

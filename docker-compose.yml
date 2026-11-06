@@ -8,7 +8,9 @@ services:
       POSTGRES_USER: asada
       POSTGRES_PASSWORD: asada_dev_local
     ports:
-      - "5432:5432"
+      # Solo en esta PC (127.0.0.1): la contrasena de desarrollo es publica (esta en el repositorio), asi
+      # que la base no debe quedar visible para otros equipos de la red (wifi publica, oficina).
+      - "127.0.0.1:5432:5432"
     volumes:
       - asada_postgres_data:/var/lib/postgresql/data
     healthcheck:
