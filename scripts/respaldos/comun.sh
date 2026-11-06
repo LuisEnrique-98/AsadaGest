@@ -6,6 +6,7 @@ RESPALDO_DIR="${RESPALDO_DIR:-/respaldos}"
 RESPALDO_HORA="${RESPALDO_HORA:-02:30}"          # hora local del respaldo diario (HH:MM)
 RESPALDO_DIARIOS="${RESPALDO_DIARIOS:-30}"       # cuantos respaldos diarios se conservan
 RESPALDO_SEMANALES="${RESPALDO_SEMANALES:-12}"   # cuantos respaldos semanales se conservan (~3 meses)
+RESPALDO_DESTINOS="${RESPALDO_DESTINOS:-}"       # Sprint 6a: destinos de rclone fuera del servidor
 PGDATABASE="${PGDATABASE:-asada_gestion}"
 export PGDATABASE
 

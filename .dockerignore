@@ -1,0 +1,15 @@
+# Lo que NO se envia a Docker al construir la imagen (Sprint 6a).
+**/bin/
+**/obj/
+.git/
+.vs/
+.vscode/
+.idea/
+tests/
+respaldos/
+despliegue/
+scripts/
+**/*.user
+**/appsettings.Local.json
+**/appsettings.*.Local.json
+**/.env
