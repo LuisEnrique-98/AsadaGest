@@ -22,3 +22,6 @@ appsettings.*.Local.json
 # macOS / Windows basura de sistema de archivos
 .DS_Store
 Thumbs.db
+
+# Respaldos de la base (Sprint 5b): datos personales de los abonados, nunca en Git
+/respaldos/

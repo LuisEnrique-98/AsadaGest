@@ -68,10 +68,16 @@ Abre la URL que muestre la consola (normalmente `https://localhost:7xxx`) y entr
 Deberias ver "Bienvenido, Administrador Cuatro Bocas" y el nombre de la organizacion
 (ASADA Cuatro Bocas / CB).
 
-**Importante:** esta contrasena esta escrita en texto plano en
-`SeedInicial.cs` unicamente porque es un dato de arranque para desarrollo local. Antes de
-usar datos reales o de desplegar en un servidor, hay que cambiarla o eliminar este usuario
-y crear uno nuevo por la interfaz.
+Desde el Sprint 5b tambien existe un **Superadministrador** de la plataforma (sin ASADA), que
+registra ASADAs nuevas y atiende sus usuarios:
+
+- **Correo:** `superadmin@plataforma.test`
+- **Contrasena:** `Plataforma#2026`
+
+**Importante:** estas contrasenas estan escritas en texto plano en
+`SeedInicial.cs` unicamente porque son datos de arranque para desarrollo local. Antes de
+usar datos reales o de desplegar en un servidor, hay que cambiarlas (Cambiar contrasena, arriba
+a la derecha) o desactivar esos usuarios y crear otros por la interfaz.
 
 ## Decisiones tomadas durante la implementacion (vale la pena que las conozcas)
 
@@ -263,6 +269,80 @@ dotnet ef migrations add Sprint5aSeguridadAuditoria \
 dotnet run --project src/Asada.Presentacion
 ```
 
+## Sprint 5b -- Usuarios y respaldos
+
+Decisiones del 4 de noviembre de 2026: contrasenas de 10 o mas caracteres con letras y numeros, sin
+vencimiento; 5 intentos fallidos bloquean la cuenta 15 minutos; el Superadministrador registra ASADAs y su
+primer Administrador; respaldos con un contenedor de Docker.
+
+- **Usuarios de la ASADA** (`/usuarios`, solo Administrador): crear, editar nombre/correo/rol, desactivar y
+  reactivar, restablecer la contrasena y desbloquear. Al crear o restablecer, el sistema genera una
+  **contrasena temporal** que se muestra una sola vez; el usuario debe cambiarla al entrar (hasta entonces solo
+  ve la pagina de cambiar contrasena). Ninguna ASADA se queda sin un Administrador activo, y nadie se cambia el
+  rol ni se desactiva a si mismo.
+- **Cambiar contrasena** (`/cuenta/cambiar-contrasena`, enlace arriba a la derecha): cualquier usuario.
+- **Sesiones**: al desactivar un usuario, cambiarle el rol o restablecer su contrasena, sus sesiones abiertas se
+  cierran (o reciben los permisos nuevos) en menos de un minuto. Un usuario desactivado, o de una ASADA
+  inactiva, no puede entrar.
+- **Plataforma** (`/plataforma/asadas`, solo Superadministrador): lista de ASADAs, registrar una ASADA nueva con
+  su primer Administrador, y entrar a los usuarios de cualquiera (`/usuarios?asada=N`). No ve abonados, lecturas
+  ni recibos de las ASADAs.
+- **Auditoria**: cada accion sobre usuarios, cada inicio de sesion, cada intento fallido (con el motivo) y cada
+  bloqueo quedan en `/auditoria` (tipo de registro "Usuario"). Las contrasenas nunca se anotan.
+- `EstadoUsuario` paso de `Asada.Infraestructura.Identidad` a `Asada.Dominio.Enums` (se guarda como texto; la
+  base no cambia por esto). `NombresRol` ahora reutiliza `Asada.Aplicacion.Usuarios.RolesUsuario`.
+
+Pasos (la migracion agrega solo la columna `usuarios.debe_cambiar_contrasena`; revise que tenga
+`defaultValue: false`):
+
+```bash
+dotnet build
+dotnet test
+dotnet ef migrations add Sprint5bUsuarios \
+  --project src/Asada.Infraestructura \
+  --startup-project src/Asada.Presentacion
+docker compose up -d
+dotnet run --project src/Asada.Presentacion
+```
+
+## Respaldos
+
+`docker compose up -d` levanta, junto a PostgreSQL, el contenedor `asada_respaldo`
+(`scripts/respaldos/`):
+
+- Un **respaldo completo** (`pg_dump`, formato personalizado y comprimido) cada dia a las 02:30 hora de Costa
+  Rica, y uno al arrancar si hoy todavia no hay (por si la computadora estuvo apagada). Cada archivo se verifica
+  con `pg_restore --list` y lleva su suma SHA-256.
+- Se conservan los **ultimos 30 diarios** y **12 semanales** (una copia por semana). Se cambia con
+  `RESPALDO_HORA`, `RESPALDO_DIARIOS` y `RESPALDO_SEMANALES` en `docker-compose.yml`.
+- Una vez por semana, una **prueba de restauracion**: restaura el ultimo respaldo en una base temporal, revisa
+  tablas y datos, y la borra. Resultado en `respaldos/pruebas-restauracion.log`.
+- Los archivos quedan en la carpeta `respaldos/` del proyecto (excluida de Git: tienen datos personales de los
+  abonados, Ley 8968). **Copie esa carpeta a otro disco o a la nube con regularidad**: un respaldo en el mismo
+  disco no protege si el disco falla.
+
+```bash
+docker compose logs respaldo                                           # que hizo y cuando
+docker compose exec respaldo bash /opt/respaldos/respaldar.sh                # respaldo ahora mismo
+docker compose exec respaldo bash /opt/respaldos/probar-restauracion.sh      # probar el ultimo respaldo
+docker compose exec respaldo bash /opt/respaldos/restaurar.sh                # lista los respaldos disponibles
+docker compose exec respaldo bash /opt/respaldos/restaurar.sh /respaldos/diarios/ARCHIVO.dump
+#   -> lo restaura en una base nueva, asada_gestion_restaurada, sin tocar la base en uso
+```
+
+Para **reemplazar la base en uso** (recuperacion ante un desastre): detenga la aplicacion y confirme con
+`CONFIRMAR=SI`. Antes de reemplazarla se hace un respaldo de la base actual, por si se eligio el archivo
+equivocado:
+
+```bash
+docker compose exec -e CONFIRMAR=SI respaldo bash /opt/respaldos/restaurar.sh /respaldos/diarios/ARCHIVO.dump asada_gestion
+```
+
+El contenedor copia los scripts de `scripts/respaldos` a `/opt/respaldos` al arrancar, quitando los fines de
+linea de Windows (CRLF); por eso los comandos usan `/opt/respaldos/`. Si cambia un script, reinicie el
+contenedor: `docker compose restart respaldo`.
+
 ## Siguiente paso
 
-Sprint 5b -- Gestion de usuarios de la ASADA (crear operadores, roles, contrasenas, bloqueo) y respaldos.
+Sprint 6 -- Migracion de los datos reales de Cuatro Bocas, despliegue en un servidor (HTTPS, respaldos fuera
+del servidor) y capacitacion.

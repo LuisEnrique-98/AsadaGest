@@ -271,7 +271,9 @@ public class ConfiguracionYAuditoriaCasosUsoTests
     {
         var uso = new BuscarAuditoriaCasoUso(new RepositorioAuditoriaVacio());
         Assert.False((await uso.EjecutarAsync(new FiltroAuditoria(new DateOnly(2026, 10, 5), new DateOnly(2026, 10, 1), null, null, null), 1)).EsExitoso);
-        Assert.False((await uso.EjecutarAsync(new FiltroAuditoria(null, null, "Usuario", null, null), 1)).EsExitoso);
+        Assert.False((await uso.EjecutarAsync(new FiltroAuditoria(null, null, "Contrasena", null, null), 1)).EsExitoso);
+        // Sprint 5b: los usuarios (altas, cambios, inicios de sesion) ya aparecen en la bitacora.
+        Assert.True((await uso.EjecutarAsync(new FiltroAuditoria(null, null, "Usuario", 2, null), 1)).EsExitoso);
         Assert.True((await uso.EjecutarAsync(new FiltroAuditoria(null, null, "Recibo", 3, " Ana "), 0)).EsExitoso);
     }
 

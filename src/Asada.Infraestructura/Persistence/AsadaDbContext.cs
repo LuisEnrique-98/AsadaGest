@@ -125,8 +125,7 @@ public class AsadaDbContext(DbContextOptions<AsadaDbContext> options, IProveedor
         // momento de la solicitud (antes de iniciar sesion) todavia no hay ningun usuario
         // autenticado del cual derivar una organizacion -- si el filtro estuviera activo,
         // bloquearia el propio login (nadie podria autenticarse jamas, salvo el
-        // Superadministrador). El aislamiento entre organizaciones para listados
-        // administrativos de usuarios se resolvera con un caso de uso propio (Sprint 5,
-        // matriz de permisos), que si puede filtrar explicitamente por organizacion_id.
+        // Superadministrador). Desde el Sprint 5b, el aislamiento de los usuarios lo hace
+        // Identidad/GestorUsuarios, que filtra explicitamente por organizacion_id en cada consulta.
     }
 }

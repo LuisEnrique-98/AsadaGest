@@ -1,0 +1,91 @@
+@page "/usuarios"
+@attribute [Authorize(Policy = Permisos.GestionarUsuarios)]
+
+@inject ListarUsuariosCasoUso ListarUsuarios
+
+<PageTitle>Usuarios</PageTitle>
+
+@if (error is not null)
+{
+    <h1>Usuarios</h1>
+    <div class="alert alert-warning">
+        @error
+        <AuthorizeView Policy="@Permisos.AdministrarPlataforma" Context="permisoPlataforma">
+            <a href="plataforma/asadas">Ver las ASADAs</a>
+        </AuthorizeView>
+    </div>
+    return;
+}
+
+@if (datos is null)
+{
+    <p><em>Cargando...</em></p>
+    return;
+}
+
+<AuthorizeView Policy="@Permisos.AdministrarPlataforma" Context="permisoPlataforma">
+    <p><a href="plataforma/asadas">&larr; Volver a las ASADAs</a></p>
+</AuthorizeView>
+
+<div class="d-flex justify-content-between align-items-center mb-1">
+    <h1 class="mb-0">Usuarios</h1>
+    <a class="btn btn-primary" href="@Enlaces.Usuarios("usuarios/nuevo", Asada)">Nuevo usuario</a>
+</div>
+<p class="text-muted">@datos.NombreAsada (@datos.CodigoAsada). Cada usuario entra con su correo y solo ve la informacion de esta ASADA.</p>
+
+@if (datos.Usuarios.Count == 0)
+{
+    <div class="alert alert-info">Esta ASADA todavia no tiene usuarios.</div>
+    return;
+}
+
+<div class="table-responsive">
+    <table class="table table-hover align-middle">
+        <thead>
+            <tr>
+                <th>Nombre</th>
+                <th>Correo</th>
+                <th>Rol</th>
+                <th>Estado</th>
+                <th>Ultimo acceso</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var u in datos.Usuarios)
+            {
+                <tr>
+                    <td><a href="@Enlaces.Usuarios($"usuarios/{u.Id}", Asada)">@u.Nombre</a></td>
+                    <td>@u.Correo</td>
+                    <td>@u.Rol</td>
+                    <td>
+                        <span class="badge @Etiquetas.ClaseEstado(u.Estado)">@Etiquetas.De(u.Estado)</span>
+                        @if (u.EstaBloqueado)
+                        {
+                            <span class="badge bg-danger">Bloqueado</span>
+                        }
+                        @if (u.DebeCambiarContrasena)
+                        {
+                            <span class="badge bg-warning text-dark" title="Tiene una contrasena temporal">Contrasena temporal</span>
+                        }
+                    </td>
+                    <td class="text-nowrap">@(u.UltimoAcceso is DateTime f ? Etiquetas.FechaHora(f) : "Nunca")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    /// <summary>Solo para el Superadministrador: ASADA elegida en Plataforma > ASADAs.</summary>
+    [Parameter, SupplyParameterFromQuery(Name = "asada")] public int? Asada { get; set; }
+
+    private UsuariosAsadaDto? datos;
+    private string? error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var resultado = await ListarUsuarios.EjecutarAsync(Asada);
+        datos = resultado.Valor;
+        error = resultado.EsExitoso ? null : string.Join(" ", resultado.Errores);
+    }
+}

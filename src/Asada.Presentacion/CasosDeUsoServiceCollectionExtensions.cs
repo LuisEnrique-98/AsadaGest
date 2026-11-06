@@ -2,9 +2,11 @@ using Asada.Aplicacion.Abonados;
 using Asada.Aplicacion.Auditoria;
 using Asada.Aplicacion.Configuracion;
 using Asada.Aplicacion.Mediciones;
+using Asada.Aplicacion.Organizaciones;
 using Asada.Aplicacion.Periodos;
 using Asada.Aplicacion.Recibos;
 using Asada.Aplicacion.Tarifas;
+using Asada.Aplicacion.Usuarios;
 
 namespace Asada.Presentacion;
 
@@ -60,6 +62,19 @@ public static class CasosDeUsoServiceCollectionExtensions
         servicios.AddScoped<ObtenerConfiguracionCasoUso>();
         servicios.AddScoped<ActualizarConfiguracionCasoUso>();
         servicios.AddScoped<BuscarAuditoriaCasoUso>();
+
+        // Sprint 5b: usuarios de cada ASADA y ASADAs de la plataforma.
+        servicios.AddSingleton<IGeneradorContrasena, GeneradorContrasena>();
+        servicios.AddScoped<ListarUsuariosCasoUso>();
+        servicios.AddScoped<ObtenerUsuarioCasoUso>();
+        servicios.AddScoped<CrearUsuarioCasoUso>();
+        servicios.AddScoped<ActualizarUsuarioCasoUso>();
+        servicios.AddScoped<CambiarEstadoUsuarioCasoUso>();
+        servicios.AddScoped<RestablecerContrasenaCasoUso>();
+        servicios.AddScoped<DesbloquearUsuarioCasoUso>();
+        servicios.AddScoped<CambiarContrasenaPropiaCasoUso>();
+        servicios.AddScoped<ListarOrganizacionesCasoUso>();
+        servicios.AddScoped<RegistrarAsadaCasoUso>();
         return servicios;
     }
 }

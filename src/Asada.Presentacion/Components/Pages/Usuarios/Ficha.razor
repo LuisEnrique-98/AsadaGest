@@ -1,0 +1,257 @@
+@page "/usuarios/{UsuarioId:int}"
+@attribute [Authorize(Policy = Permisos.GestionarUsuarios)]
+@using System.ComponentModel.DataAnnotations
+
+@inject ObtenerUsuarioCasoUso ObtenerUsuario
+@inject ActualizarUsuarioCasoUso ActualizarUsuario
+@inject CambiarEstadoUsuarioCasoUso CambiarEstado
+@inject RestablecerContrasenaCasoUso RestablecerContrasena
+@inject DesbloquearUsuarioCasoUso Desbloquear
+@inject NavigationManager Navegacion
+
+<PageTitle>Usuario</PageTitle>
+
+<p><a href="@Enlaces.Usuarios("usuarios", Asada)">&larr; Volver a usuarios</a></p>
+
+@if (error is not null)
+{
+    <div class="alert alert-warning">@error</div>
+    return;
+}
+
+@if (ficha is null || Modelo is null)
+{
+    <p><em>Cargando...</em></p>
+    return;
+}
+
+@{ var u = ficha.Usuario; }
+
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+    <h1 class="mb-0 me-2">@u.Nombre</h1>
+    <span class="badge @Etiquetas.ClaseEstado(u.Estado)">@Etiquetas.De(u.Estado)</span>
+    @if (u.EstaBloqueado)
+    {
+        <span class="badge bg-danger">Bloqueado</span>
+    }
+    @if (u.DebeCambiarContrasena)
+    {
+        <span class="badge bg-warning text-dark">Contrasena temporal</span>
+    }
+</div>
+
+@if (Ok is not null && MensajeOk(Ok) is string mensaje)
+{
+    <div class="alert alert-success">@mensaje</div>
+}
+
+@if (contrasenaNueva is not null)
+{
+    <ContrasenaTemporal Titulo="Contrasena restablecida" Correo="@u.Correo" Contrasena="@contrasenaNueva" />
+}
+
+@if (erroresAccion.Count > 0)
+{
+    <div class="alert alert-danger" role="alert">
+        <ul class="mb-0">@foreach (var e in erroresAccion) { <li>@e</li> }</ul>
+    </div>
+}
+
+@if (ficha.EsUstedMismo)
+{
+    <div class="alert alert-info">
+        Este es su propio usuario. Puede cambiar su nombre y correo; su rol y su estado los cambia otro Administrador.
+        Para su contrasena use <a href="cuenta/cambiar-contrasena">Cambiar contrasena</a>.
+    </div>
+}
+
+<div class="row g-4">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-body">
+                <h2 class="h5">Datos</h2>
+                @* Sin <AntiforgeryToken />: el EditForm ya incluye el suyo. *@
+                <EditForm Model="Modelo" method="post" OnValidSubmit="GuardarAsync" FormName="editar-usuario">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary class="text-danger" role="alert" />
+                    @if (erroresDatos.Count > 0)
+                    {
+                        <div class="alert alert-danger" role="alert">
+                            <ul class="mb-0">@foreach (var e in erroresDatos) { <li>@e</li> }</ul>
+                        </div>
+                    }
+                    <div class="mb-3">
+                        <label for="nombre" class="form-label">Nombre completo</label>
+                        <InputText id="nombre" class="form-control" @bind-Value="Modelo.Nombre" />
+                    </div>
+                    <div class="mb-3">
+                        <label for="correo" class="form-label">Correo</label>
+                        <InputText id="correo" type="email" class="form-control" @bind-Value="Modelo.Correo" autocomplete="off" />
+                        <div class="form-text">Es el usuario para iniciar sesion. Si lo cambia, la persona debe volver a entrar con el correo nuevo.</div>
+                    </div>
+                    @if (ficha.EsUstedMismo)
+                    {
+                        <input type="hidden" name="Modelo.Rol" value="@u.Rol" />
+                        <p><strong>Rol:</strong> @u.Rol</p>
+                    }
+                    else
+                    {
+                        <SelectorRol Id="rol" @bind-Valor="Modelo.Rol" />
+                    }
+                    <button type="submit" class="btn btn-primary">Guardar cambios</button>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card mb-3">
+            <div class="card-body">
+                <h2 class="h5">Acceso</h2>
+                <dl class="row mb-0">
+                    <dt class="col-sm-5">Ultimo acceso</dt>
+                    <dd class="col-sm-7">@(u.UltimoAcceso is DateTime f ? Etiquetas.FechaHora(f) : "Nunca ha entrado")</dd>
+                    <dt class="col-sm-5">Creado</dt>
+                    <dd class="col-sm-7">@Etiquetas.FechaHora(u.FechaCreacion)</dd>
+                    @if (u.BloqueadoHasta is DateTimeOffset hasta)
+                    {
+                        <dt class="col-sm-5">Bloqueado hasta</dt>
+                        <dd class="col-sm-7">@Etiquetas.FechaHora(hasta) (por intentos fallidos)</dd>
+                    }
+                    else if (u.IntentosFallidos > 0)
+                    {
+                        <dt class="col-sm-5">Intentos fallidos</dt>
+                        <dd class="col-sm-7">@u.IntentosFallidos seguidos (se bloquea al llegar a 5)</dd>
+                    }
+                </dl>
+            </div>
+        </div>
+
+        @if (!ficha.EsUstedMismo)
+        {
+            <div class="card">
+                <div class="card-body d-flex flex-column gap-3">
+                    <h2 class="h5 mb-0">Acciones</h2>
+
+                    @if (u.EstaBloqueado)
+                    {
+                        @* Formularios HTML normales (no EditForm): cada uno necesita su propio token antiforgery. *@
+                        <form method="post" @onsubmit="DesbloquearAsync" @formname="desbloquear-usuario">
+                            <AntiforgeryToken />
+                            <button type="submit" class="btn btn-outline-primary">Desbloquear</button>
+                            <div class="form-text">Quita el bloqueo de 15 minutos; la contrasena no cambia.</div>
+                        </form>
+                    }
+
+                    @if (u.EstaActivo)
+                    {
+                        <form method="post" @onsubmit="RestablecerAsync" @formname="restablecer-contrasena">
+                            <AntiforgeryToken />
+                            <button type="submit" class="btn btn-outline-warning"
+                                    onclick="return confirm('¿Restablecer la contrasena? La actual deja de funcionar y se cierran sus sesiones abiertas.')">
+                                Restablecer contrasena
+                            </button>
+                            <div class="form-text">Genera una contrasena temporal nueva (tambien quita un bloqueo). La persona debe cambiarla al entrar.</div>
+                        </form>
+                    }
+
+                    <form method="post" @onsubmit="CambiarEstadoAsync" @formname="estado-usuario">
+                        <AntiforgeryToken />
+                        @if (u.EstaActivo)
+                        {
+                            <button type="submit" class="btn btn-outline-danger"
+                                    onclick="return confirm('¿Desactivar el usuario? No podra iniciar sesion y se cerraran sus sesiones abiertas.')">
+                                Desactivar usuario
+                            </button>
+                            <div class="form-text">No se borra: su nombre sigue en la auditoria y en lo que registro. Se puede reactivar.</div>
+                        }
+                        else
+                        {
+                            <button type="submit" class="btn btn-outline-success">Reactivar usuario</button>
+                        }
+                    </form>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public int UsuarioId { get; set; }
+    [Parameter, SupplyParameterFromQuery(Name = "asada")] public int? Asada { get; set; }
+    [Parameter, SupplyParameterFromQuery(Name = "ok")] public string? Ok { get; set; }
+
+    [SupplyParameterFromForm(FormName = "editar-usuario")]
+    private ModeloUsuario? Modelo { get; set; }
+
+    private ObtenerUsuarioCasoUso.UsuarioFichaDto? ficha;
+    private string? error;
+    private string? contrasenaNueva;
+    private List<string> erroresDatos = [];
+    private List<string> erroresAccion = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarAsync();
+        if (ficha is null) return;
+        Modelo ??= new ModeloUsuario { Nombre = ficha.Usuario.Nombre, Correo = ficha.Usuario.Correo, Rol = ficha.Usuario.Rol };
+    }
+
+    private async Task CargarAsync()
+    {
+        var resultado = await ObtenerUsuario.EjecutarAsync(UsuarioId, Asada);
+        ficha = resultado.Valor;
+        error = resultado.EsExitoso ? null : string.Join(" ", resultado.Errores);
+    }
+
+    private string Volver(string ok) => Enlaces.Usuarios($"/usuarios/{UsuarioId}?ok={ok}", Asada);
+
+    private static string? MensajeOk(string ok) => ok switch
+    {
+        "datos" => "Datos guardados. Si cambio el rol, la persona recibe sus permisos nuevos en menos de un minuto.",
+        "desactivado" => "Usuario desactivado. Sus sesiones abiertas se cierran en menos de un minuto.",
+        "activado" => "Usuario reactivado. Puede volver a iniciar sesion con su contrasena.",
+        "desbloqueado" => "Usuario desbloqueado.",
+        _ => null,
+    };
+
+    private async Task GuardarAsync()
+    {
+        var resultado = await ActualizarUsuario.EjecutarAsync(new ActualizarUsuarioSolicitud(
+            Asada, UsuarioId, Modelo!.Nombre, Modelo.Correo, Modelo.Rol));
+        if (resultado.EsExitoso) { Navegacion.NavigateTo(Volver("datos"), forceLoad: true); return; }
+        erroresDatos = resultado.Errores.ToList();
+    }
+
+    private async Task CambiarEstadoAsync()
+    {
+        if (ficha is null) return;
+        var activar = !ficha.Usuario.EstaActivo;
+        var resultado = await CambiarEstado.EjecutarAsync(new CambiarEstadoUsuarioSolicitud(Asada, UsuarioId, activar));
+        if (resultado.EsExitoso) { Navegacion.NavigateTo(Volver(activar ? "activado" : "desactivado"), forceLoad: true); return; }
+        erroresAccion = resultado.Errores.ToList();
+    }
+
+    private async Task DesbloquearAsync()
+    {
+        var resultado = await Desbloquear.EjecutarAsync(new UsuarioObjetivoSolicitud(Asada, UsuarioId));
+        if (resultado.EsExitoso) { Navegacion.NavigateTo(Volver("desbloqueado"), forceLoad: true); return; }
+        erroresAccion = resultado.Errores.ToList();
+    }
+
+    private async Task RestablecerAsync()
+    {
+        // La contrasena temporal se muestra en esta misma respuesta (no se pasa por la URL).
+        var resultado = await RestablecerContrasena.EjecutarAsync(new UsuarioObjetivoSolicitud(Asada, UsuarioId));
+        if (!resultado.EsExitoso) { erroresAccion = resultado.Errores.ToList(); return; }
+        contrasenaNueva = resultado.Valor;
+        await CargarAsync();
+    }
+
+    private sealed class ModeloUsuario
+    {
+        [Required(ErrorMessage = "Indique el nombre.")] public string? Nombre { get; set; }
+        [Required(ErrorMessage = "Indique el correo.")] public string? Correo { get; set; }
+        [Required(ErrorMessage = "Elija el rol.")] public string? Rol { get; set; }
+    }
+}

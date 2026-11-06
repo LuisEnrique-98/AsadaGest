@@ -24,6 +24,7 @@ builder.Services.AgregarInfraestructura(builder.Configuration);
 
 // Casos de uso de Asada.Aplicacion (Abonados, Propiedades, Servicios...).
 builder.Services.AgregarCasosDeUso();
+builder.Services.AddScoped<IRenovadorSesion, RenovadorSesion>();
 
 var app = builder.Build();
 
@@ -51,6 +52,9 @@ app.UseStaticFiles();
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Sprint 5b: con una contrasena temporal solo se puede entrar a cambiarla. Ver Seguridad/CambioContrasenaObligatorio.cs.
+app.UseCambioContrasenaObligatorio();
 
 app.UseAntiforgery();
 
