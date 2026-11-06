@@ -65,3 +65,8 @@
 #*.PDF   diff=astextplain
 #*.rtf   diff=astextplain
 #*.RTF   diff=astextplain
+
+# Sprint 6a: archivos que se usan dentro de Linux (servidor/contenedores)
+Caddyfile text eol=lf
+Dockerfile text eol=lf
+*.ejemplo text eol=lf

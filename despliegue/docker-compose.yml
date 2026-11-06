@@ -1,0 +1,110 @@
+# Servidor de produccion (Sprint 6a). Se usa desde esta carpeta:  cd despliegue && docker compose ...
+# Los valores secretos y propios del servidor van en despliegue/.env (lo crea instalar.sh; plantilla en
+# .env.ejemplo; nunca se sube a Git). La guia completa esta en despliegue/LEEME.md.
+#
+# Diferencias con el docker-compose.yml de la raiz (solo para la PC de desarrollo):
+#   - PostgreSQL no publica el puerto 5432: solo lo ven los otros contenedores.
+#   - La aplicacion corre en un contenedor (imagen construida con el Dockerfile de la raiz).
+#   - Caddy recibe el trafico en los puertos 80/443 y pone el HTTPS.
+#   - El contenedor de respaldo trae rclone para copiar los respaldos fuera del servidor.
+name: asada
+
+x-registro: &registro
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "5"
+
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: asada_gestion
+      POSTGRES_USER: asada
+      POSTGRES_PASSWORD: ${POSTGRES_CONTRASENA:?Falta POSTGRES_CONTRASENA en despliegue/.env}
+    volumes:
+      - datos_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U asada -d asada_gestion"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    <<: *registro
+
+  app:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: asadagest-app:local
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ConnectionStrings__AsadaDb: "Host=postgres;Port=5432;Database=asada_gestion;Username=asada;Password=${POSTGRES_CONTRASENA}"
+      Plataforma__CorreoSuperadministrador: ${SUPERADMIN_CORREO:?Falta SUPERADMIN_CORREO en despliegue/.env}
+    volumes:
+      - claves_app:/claves
+    <<: *registro
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      SITIO_DIRECCION: ${SITIO_DIRECCION:?Falta SITIO_DIRECCION en despliegue/.env}
+      SITIO_TLS: ${SITIO_TLS:-internal}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - datos_caddy:/data
+      - config_caddy:/config
+    <<: *registro
+
+  respaldo:
+    build: ./respaldo
+    image: asadagest-respaldo:local
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGDATABASE: asada_gestion
+      PGUSER: asada
+      PGPASSWORD: ${POSTGRES_CONTRASENA}
+      TZ: CST6
+      RESPALDO_HORA: ${RESPALDO_HORA:-02:30}
+      RESPALDO_DIARIOS: ${RESPALDO_DIARIOS:-30}
+      RESPALDO_SEMANALES: ${RESPALDO_SEMANALES:-12}
+      # Destinos fuera del servidor (rclone), separados por espacios. Vacio = solo en el servidor.
+      RESPALDO_DESTINOS: ${RESPALDO_DESTINOS:-}
+      RESPALDO_REMOTO_DIAS_DIARIOS: ${RESPALDO_REMOTO_DIAS_DIARIOS:-}
+      RESPALDO_REMOTO_DIAS_SEMANALES: ${RESPALDO_REMOTO_DIAS_SEMANALES:-}
+      RCLONE_CONFIG: /config/rclone/rclone.conf
+    volumes:
+      - ../scripts/respaldos:/scripts:ro
+      - ${RUTA_RESPALDOS:-/srv/asada/respaldos}:/respaldos
+      - ./rclone:/config/rclone
+    # Igual que en desarrollo: copia los scripts a /opt/respaldos quitando los CRLF de Windows.
+    entrypoint:
+      - bash
+      - -c
+      - |
+        mkdir -p /opt/respaldos
+        for f in /scripts/*.sh; do tr -d '\r' < "$$f" > "/opt/respaldos/$${f##*/}"; done
+        exec bash /opt/respaldos/ciclo-respaldos.sh
+    <<: *registro
+
+volumes:
+  datos_postgres:
+  claves_app:
+  datos_caddy:
+  config_caddy:

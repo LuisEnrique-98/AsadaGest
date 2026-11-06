@@ -342,7 +342,37 @@ El contenedor copia los scripts de `scripts/respaldos` a `/opt/respaldos` al arr
 linea de Windows (CRLF); por eso los comandos usan `/opt/respaldos/`. Si cambia un script, reinicie el
 contenedor: `docker compose restart respaldo`.
 
+## Sprint 6a -- Despliegue en un servidor
+
+Todo lo del servidor esta en `despliegue/` y su guia paso a paso en **`despliegue/LEEME.md`** (VPS con
+Ubuntu + Docker, HTTPS con Caddy, respaldos fuera del servidor). Resumen:
+
+- **`Dockerfile`** (raiz): imagen de la aplicacion (.NET 8, usuario sin privilegios, verificacion de salud en
+  `/salud`). En el servidor no hace falta instalar .NET.
+- **`despliegue/docker-compose.yml`**: postgres (sin puerto publicado), app, caddy (puertos 80/443) y respaldo
+  (PostgreSQL 16 + rclone). Los secretos van en `despliegue/.env` (fuera de Git; plantilla `.env.ejemplo`).
+  El `docker-compose.yml` de la raiz sigue siendo solo para desarrollo y no cambia.
+- **Sin dominio propio**: `SITIO_DIRECCION=IP-CON-GUIONES.sslip.io` da un nombre gratuito con certificado
+  valido de Let's Encrypt; con una IP sola, `SITIO_TLS=internal` (el navegador advierte). Pasar a un dominio
+  propio es cambiar dos lineas del `.env`.
+- **Comandos de la aplicacion** (`ComandosConsola.cs`): `migrar` aplica las migraciones, crea los roles y el
+  Superadministrador (correo de `Plataforma__CorreoSuperadministrador`, contrasena temporal que se muestra una
+  vez); `restablecer-superadministrador` genera otra temporal. En Produccion la aplicacion ya no migra sola:
+  `actualizar.sh` respalda la base y luego ejecuta `migrar`. En el servidor no se crean la ASADA `CB` ni los
+  usuarios `.test` de desarrollo: el Superadministrador registra Cuatro Bocas desde la pantalla.
+- **Claves de la sesion persistentes** (`Despliegue:CarpetaClaves`, volumen `claves_app`): actualizar o
+  reiniciar no saca a los usuarios de su sesion ni rompe los formularios abiertos.
+- **Detras de Caddy**: `ASPNETCORE_FORWARDEDHEADERS_ENABLED=true` (en el Dockerfile) hace que la aplicacion vea
+  el esquema https y la IP real.
+- **Respaldos fuera del servidor** (`scripts/respaldos/subir-respaldos.sh`): despues de cada respaldo se copian
+  con rclone a los destinos de `RESPALDO_DESTINOS` (Google Drive, OneDrive, S3...; uno o varios, opcionalmente
+  cifrados); si uno falla se reintenta cada hora. Sin destinos (como en desarrollo) no hace nada. Ademas,
+  `scripts/despliegue/descargar-respaldos.ps1` baja a una PC con Windows los respaldos que falten y verifica su
+  SHA-256.
+
+En la PC de desarrollo nada cambia: `dotnet run` sigue migrando y sembrando datos de prueba al arrancar.
+
 ## Siguiente paso
 
-Sprint 6 -- Migracion de los datos reales de Cuatro Bocas, despliegue en un servidor (HTTPS, respaldos fuera
-del servidor) y capacitacion.
+Sprint 6b -- Importacion de abonados, propiedades, servicios, medidores y lecturas desde Excel (plantilla,
+validacion con informe de errores antes de cargar, carga en una sola transaccion) y capacitacion.

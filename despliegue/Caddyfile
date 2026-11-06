@@ -1,0 +1,31 @@
+# Caddy: recibe las visitas en los puertos 80 y 443, pone el HTTPS y las pasa a la aplicacion
+# (Sprint 6a). Los valores vienen de despliegue/.env:
+#
+#   SITIO_DIRECCION  donde se abre el sistema:
+#                      - una IP:                      203.0.113.5
+#                      - un nombre de sslip.io:       203-0-113-5.sslip.io   (gratis, sin comprar dominio)
+#                      - un dominio propio:           sistema.asadacuatrobocas.com
+#   SITIO_TLS        como se obtiene el certificado HTTPS:
+#                      - internal         certificado propio de Caddy. Funciona con una IP, pero el
+#                                         navegador muestra una advertencia la primera vez.
+#                      - un correo        certificado gratuito de Let's Encrypt (sin advertencias).
+#                                         Necesita un nombre (sslip.io o dominio), no una IP.
+#
+# Cambiar de uno a otro: editar .env y ejecutar  docker compose up -d caddy
+
+{$SITIO_DIRECCION} {
+	tls {$SITIO_TLS}
+
+	encode zstd gzip
+
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+
+	# Blazor usa WebSockets; Caddy los pasa sin configuracion adicional. Tambien agrega las cabeceras
+	# X-Forwarded-For / X-Forwarded-Proto que la aplicacion acepta (ASPNETCORE_FORWARDEDHEADERS_ENABLED).
+	reverse_proxy app:8080
+}

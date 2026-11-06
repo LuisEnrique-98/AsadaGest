@@ -25,3 +25,6 @@ Thumbs.db
 
 # Respaldos de la base (Sprint 5b): datos personales de los abonados, nunca en Git
 /respaldos/
+
+# Sprint 6a: configuracion de rclone del servidor (tiene los tokens de Google Drive/OneDrive/S3)
+/despliegue/rclone/
