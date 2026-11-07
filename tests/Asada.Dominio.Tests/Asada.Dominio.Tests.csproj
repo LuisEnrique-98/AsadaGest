@@ -16,6 +16,10 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <!-- xunit 2.4.2 arrastra versiones 4.3.0 de estos paquetes, con vulnerabilidades publicadas
+         (GHSA-7jgj-8wvc-jh57 y GHSA-cmhx-cq75-c4mj); se fijan las versiones corregidas. -->
+    <PackageReference Include="System.Net.Http" Version="4.3.4" />
+    <PackageReference Include="System.Text.RegularExpressions" Version="4.3.1" />
     <PackageReference Include="coverlet.collector" Version="6.0.0">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>

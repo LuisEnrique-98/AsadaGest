@@ -1,17 +1,21 @@
 #!/bin/bash
 # Prepara un VPS nuevo con Ubuntu 22.04 o 24.04 para el sistema (Sprint 6a). Se ejecuta UNA vez, como
-# root, recien contratado el servidor:
+# root (o con sudo), recien contratado el servidor:
 #
-#   bash preparar-servidor.sh asada
+#   bash preparar-servidor.sh asada          (como root)
+#   sudo bash preparar-servidor.sh asada     (Oracle Cloud: se entra como "ubuntu")
 #
 # ("asada" es el usuario de trabajo que se crea; puede ser otro nombre.) Hace lo siguiente:
 #   1. Actualiza el sistema y activa las actualizaciones de seguridad automaticas.
 #   2. Zona horaria de Costa Rica y 2 GB de memoria de intercambio (swap) si el servidor no tiene: compilar
 #      la imagen de .NET en un VPS pequeno puede quedarse sin memoria.
 #   3. Instala Docker (con docker compose) y git.
-#   4. Firewall (ufw): solo SSH, HTTP (80) y HTTPS (443). PostgreSQL no queda expuesto.
-#   5. Crea el usuario de trabajo (con sudo y permiso para usar Docker), le copia las llaves SSH de
-#      root y crea /opt/asadagest (para el repositorio) y /srv/asada/respaldos.
+#   4. Firewall: solo SSH, HTTP (80) y HTTPS (443). PostgreSQL no queda expuesto. Con ufw, salvo en
+#      Oracle Cloud: sus imagenes de Ubuntu traen reglas de iptables propias (que bloquean todo menos
+#      SSH) y Oracle recomienda no usar ufw; ahi se agregan 80/443 a esas reglas y se guardan.
+#   5. Crea el usuario de trabajo (con sudo y permiso para usar Docker), le copia las llaves SSH del
+#      usuario con que se entro (root, o "ubuntu" en Oracle) y crea /opt/asadagest (para el
+#      repositorio) y /srv/asada/respaldos.
 # No cambia la configuracion de SSH (para no dejarlo a uno afuera); ver LEEME.md, paso 2.
 set -euo pipefail
 
@@ -30,7 +34,7 @@ paso "1/5 Actualizando el sistema"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -q
 apt-get upgrade -y -q
-apt-get install -y -q ca-certificates curl git ufw unattended-upgrades
+apt-get install -y -q ca-certificates curl git unattended-upgrades
 dpkg-reconfigure -f noninteractive unattended-upgrades
 
 paso "2/5 Zona horaria America/Costa_Rica y memoria de intercambio"
@@ -56,12 +60,26 @@ systemctl enable --now docker
 docker compose version
 
 paso "4/5 Firewall: SSH, 80 y 443"
-ufw allow OpenSSH
-ufw allow 80/tcp
-ufw allow 443/tcp
-ufw allow 443/udp
-ufw --force enable
-ufw status
+if [ -f /etc/iptables/rules.v4 ] && grep -q "InstanceServices" /etc/iptables/rules.v4; then
+    echo "Oracle Cloud detectado: se usan sus reglas de iptables (no ufw)."
+    command -v netfilter-persistent > /dev/null || apt-get install -y -q iptables-persistent
+    for regla in "-p tcp --dport 80" "-p tcp --dport 443" "-p udp --dport 443"; do
+        # shellcheck disable=SC2086
+        iptables -C INPUT $regla -m conntrack --ctstate NEW -j ACCEPT 2> /dev/null \
+            || iptables -I INPUT 5 $regla -m conntrack --ctstate NEW -j ACCEPT
+    done
+    netfilter-persistent save
+    iptables -L INPUT -n --line-numbers | head -12
+    echo "Recuerde abrir tambien 80 y 443 en la Security List de la red (consola de Oracle; LEEME.md)."
+else
+    apt-get install -y -q ufw
+    ufw allow OpenSSH
+    ufw allow 80/tcp
+    ufw allow 443/tcp
+    ufw allow 443/udp
+    ufw --force enable
+    ufw status
+fi
 
 paso "5/5 Usuario de trabajo '$usuario' y carpetas"
 if ! id "$usuario" > /dev/null 2>&1; then
@@ -70,10 +88,18 @@ if ! id "$usuario" > /dev/null 2>&1; then
     passwd "$usuario"
 fi
 usermod -aG sudo,docker "$usuario"
-if [ -f /root/.ssh/authorized_keys ]; then
+# Llaves SSH del usuario con que se entro (con sudo: SUDO_USER, p. ej. "ubuntu" en Oracle). Las de root
+# en Oracle traen una restriccion ("Please login as ubuntu") que no debe copiarse.
+origen_llaves="/root/.ssh/authorized_keys"
+if [ -n "${SUDO_USER:-}" ] && [ "$SUDO_USER" != root ] && [ -f "/home/$SUDO_USER/.ssh/authorized_keys" ]; then
+    origen_llaves="/home/$SUDO_USER/.ssh/authorized_keys"
+fi
+if [ -f "$origen_llaves" ] && [ ! -f "/home/$usuario/.ssh/authorized_keys" ]; then
     install -d -m 700 -o "$usuario" -g "$usuario" "/home/$usuario/.ssh"
-    install -m 600 -o "$usuario" -g "$usuario" /root/.ssh/authorized_keys "/home/$usuario/.ssh/authorized_keys"
-    echo "Se copiaron las llaves SSH de root a $usuario."
+    grep -v 'Please login as' "$origen_llaves" > "/home/$usuario/.ssh/authorized_keys" || true
+    chown "$usuario:$usuario" "/home/$usuario/.ssh/authorized_keys"
+    chmod 600 "/home/$usuario/.ssh/authorized_keys"
+    echo "Se copiaron las llaves SSH de $origen_llaves a $usuario."
 fi
 install -d -m 755 -o "$usuario" -g "$usuario" /opt/asadagest
 install -d -m 750 -o root -g "$usuario" /srv/asada

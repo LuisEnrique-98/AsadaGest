@@ -1,0 +1,51 @@
+# Verificacion automatica (Sprint 6a): en cada PR y en cada cambio de master, GitHub compila la solucion,
+# corre las pruebas y revisa si algun paquete NuGet tiene vulnerabilidades conocidas. El resultado aparece
+# en el PR (marca verde o roja); no hace falta tener la PC encendida.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  compilar-y-probar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Restaurar paquetes
+        run: dotnet restore AsadaGestion.sln
+
+      - name: Compilar
+        run: dotnet build AsadaGestion.sln --configuration Release --no-restore
+
+      - name: Pruebas
+        run: dotnet test AsadaGestion.sln --configuration Release --no-build --logger "console;verbosity=normal"
+
+      # Falla si algun paquete (directo o transitivo) tiene una vulnerabilidad conocida.
+      - name: Paquetes con vulnerabilidades conocidas
+        run: |
+          dotnet list AsadaGestion.sln package --vulnerable --include-transitive | tee vulnerables.txt
+          if grep -q "has the following vulnerable packages" vulnerables.txt; then
+            echo "::error::Hay paquetes NuGet con vulnerabilidades conocidas (ver arriba)."
+            exit 1
+          fi
+
+      # El Dockerfile tambien se compila en cada PR (sin publicar), para enterarse antes de integrar.
+      - name: Construir la imagen (sin publicar)
+        if: github.event_name == 'pull_request'
+        run: docker build --tag asadagest-app:prueba .
