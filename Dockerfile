@@ -5,7 +5,7 @@
 # Etapa 1: compilar y publicar con el SDK de .NET 8. El SDK corre en la arquitectura de la maquina que
 # construye (BUILDPLATFORM) y compila para la del servidor (TARGETARCH): asi la imagen arm64 (Oracle
 # Ampere) se genera en GitHub sin emular un procesador Arm, que seria muy lento.
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:8.0 AS compilacion
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0 AS compilacion
 ARG TARGETARCH
 WORKDIR /fuente
 
