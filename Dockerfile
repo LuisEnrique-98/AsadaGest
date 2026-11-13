@@ -26,7 +26,7 @@ RUN dotnet publish src/Asada.Presentacion/Asada.Presentacion.csproj \
         --output /publicado /p:UseAppHost=false
 
 # Etapa 2: solo el runtime de ASP.NET Core (imagen mas liviana, sin el SDK ni el codigo fuente).
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
+FROM mcr.microsoft.com/dotnet/aspnet:11.0 AS final
 
 # curl: para la verificacion de salud. libfontconfig1: la usa el motor de QuestPDF (recibos en PDF)
 # en Linux.
