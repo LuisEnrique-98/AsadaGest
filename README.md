@@ -125,6 +125,8 @@ src/
   Asada.Presentacion/       Blazor Server: Program.cs, Login.razor, Home.razor.
 tests/
   Asada.Dominio.Tests/      Pruebas unitarias de Organizacion (xUnit).
+  Asada.Aplicacion.Tests/   Pruebas de los casos de uso.
+  Asada.Presentacion.Tests/ Pruebas de las piezas de seguridad (Sprint 6c).
 ```
 
 ## Sprint 1 -- Abonados
@@ -376,6 +378,32 @@ Ubuntu + Docker, HTTPS con Caddy, respaldos fuera del servidor). Resumen:
   cada PR. **Dependabot** propone actualizaciones de NuGet, imagenes base y acciones.
 
 En la PC de desarrollo nada cambia: `dotnet run` sigue migrando y sembrando datos de prueba al arrancar.
+
+## Sprint 6c-1 -- Endurecimiento de seguridad
+
+Primera parte del Sprint 6c (la segunda, 6c-2, agrega el segundo factor para Administrador y
+Superadministrador). Corrige hallazgos de la revision de seguridad del 6/11/2026:
+
+- **Superadministrador solo con el rol** (`ProveedorOrganizacion`, `SignInManagerAsada`): no tener ASADA ya no
+  basta para ver todas las ASADAs; la sesion debe traer el rol. Un usuario sin ASADA y sin ese rol no puede
+  iniciar sesion.
+- **Seed de desarrollo solo con base local** (`SeedInicial.EsBaseLocal`): los usuarios `.test` (contrasenas
+  publicas) solo se crean si la base esta en localhost, 127.0.0.1 o ::1.
+- **Cerrar sesion valida el token antiforgery**: otra pagina ya no puede cerrar la sesion de nadie.
+- **Limites de solicitudes** (`Seguridad/LimitesSolicitudes.cs`): 10 intentos por minuto y 30 por hora por IP
+  para iniciar sesion o cambiar la contrasena; el PDF del periodo, uno a la vez y 10 por minuto por usuario.
+  Al pasarse: pagina "Demasiadas solicitudes" (429) y advertencia en el log. El login muestra el mismo
+  mensaje para cualquier fallo (no revela si el correo existe ni si la cuenta esta bloqueada o desactivada).
+- **Cookies** de sesion y antiforgery solo por HTTPS y, en el servidor, con prefijo `__Host-`
+  (`Seguridad/CookiesSeguras.cs`). Al actualizar, todos vuelven a iniciar sesion una vez.
+- **Politica de contenido (CSP) y Permissions-Policy** (`Seguridad/PoliticaContenido.cs`): sin JavaScript ni
+  estilos dentro del HTML (las confirmaciones pasan a `wwwroot/js/asada.js` con `data-confirmar="..."`, los
+  anchos a clases `ancho-NN` de `app.css`). Modo `informe` (solo avisa en el log) o `aplicar` (bloquea), con
+  `Seguridad:Csp` (`CSP_MODO` en `despliegue/.env`).
+- **Pruebas**: nuevo proyecto `tests/Asada.Presentacion.Tests`.
+
+Para paginas nuevas: no usar `onclick="..."` ni `style="..."`; para pedir confirmacion antes de enviar un
+formulario, poner `data-confirmar="Pregunta"` en el boton.
 
 ## Siguiente paso
 

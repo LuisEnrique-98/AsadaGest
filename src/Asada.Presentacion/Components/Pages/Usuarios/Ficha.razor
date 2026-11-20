@@ -148,7 +148,7 @@
                         <form method="post" @onsubmit="RestablecerAsync" @formname="restablecer-contrasena">
                             <AntiforgeryToken />
                             <button type="submit" class="btn btn-outline-warning"
-                                    onclick="return confirm('¿Restablecer la contrasena? La actual deja de funcionar y se cierran sus sesiones abiertas.')">
+                                    data-confirmar="¿Restablecer la contrasena? La actual deja de funcionar y se cierran sus sesiones abiertas.">
                                 Restablecer contrasena
                             </button>
                             <div class="form-text">Genera una contrasena temporal nueva (tambien quita un bloqueo). La persona debe cambiarla al entrar.</div>
@@ -160,7 +160,7 @@
                         @if (u.EstaActivo)
                         {
                             <button type="submit" class="btn btn-outline-danger"
-                                    onclick="return confirm('¿Desactivar el usuario? No podra iniciar sesion y se cerraran sus sesiones abiertas.')">
+                                    data-confirmar="¿Desactivar el usuario? No podra iniciar sesion y se cerraran sus sesiones abiertas.">
                                 Desactivar usuario
                             </button>
                             <div class="form-text">No se borra: su nombre sigue en la auditoria y en lo que registro. Se puede reactivar.</div>

@@ -12,12 +12,12 @@
 
 @if (registrada is not null)
 {
-    <div class="alert alert-info" style="max-width: 48rem">
+    <div class="alert alert-info ancho-48">
         ASADA <strong>@registrada.Nombre</strong> registrada con el codigo <strong>@registrada.Codigo</strong>.
         Sus abonados seran @(registrada.Codigo)-AB-000001, @(registrada.Codigo)-AB-000002... y sus recibos @(registrada.Codigo)-REC-@(DateTime.Today.Year)-000001...
     </div>
     <ContrasenaTemporal Titulo="Administrador de la ASADA" Correo="@registrada.CorreoAdministrador" Contrasena="@registrada.ContrasenaTemporal" />
-    <p class="text-muted" style="max-width: 48rem">
+    <p class="text-muted ancho-48">
         Al entrar, el Administrador completa los datos de contacto de la ASADA (Configuracion), crea los demas usuarios,
         las categorias y las tarifas.
     </p>

@@ -15,7 +15,8 @@ namespace Asada.Infraestructura.Identidad;
 /// SignInManager de la plataforma (Sprint 5b). Agrega dos cosas al de ASP.NET Core Identity:
 ///
 ///  1. No deja entrar a un usuario desactivado ni a los usuarios de una ASADA inactiva
-///     (CanSignInAsync; el inicio de sesion responde "NotAllowed").
+///     (CanSignInAsync; el inicio de sesion responde "NotAllowed"). Sprint 6c (M-1): tampoco a un
+///     usuario sin ASADA que no tenga el rol Superadministrador (un usuario mal creado).
 ///  2. Anota cada intento de inicio de sesion en la bitacora de auditoria: correcto, fallido (y por
 ///     que) y el momento en que la cuenta queda bloqueada por intentos. Un intento con un correo que
 ///     no existe no se anota (no hay usuario ni ASADA a la cual asignarlo); queda solo en el log.
@@ -47,6 +48,11 @@ public sealed class SignInManagerAsada(
                 .Select(o => (EstadoOrganizacion?)o.Estado)
                 .FirstOrDefaultAsync();
             if (estado != EstadoOrganizacion.Activa) return false;
+        }
+        else if (!await UserManager.IsInRoleAsync(user, NombresRol.Superadministrador))
+        {
+            Logger.LogWarning("El usuario {UsuarioId} no tiene ASADA ni el rol Superadministrador: no se le deja iniciar sesion.", user.Id);
+            return false;
         }
 
         return await base.CanSignInAsync(user);
@@ -92,7 +98,7 @@ public sealed class SignInManagerAsada(
         {
             accion = AccionAuditoria.InicioSesionFallido;
             var motivo = resultado.IsLockedOut ? "La cuenta estaba bloqueada"
-                : resultado.IsNotAllowed ? "Usuario desactivado o ASADA inactiva"
+                : resultado.IsNotAllowed ? "Usuario desactivado, ASADA inactiva o usuario sin ASADA"
                 : "Contrasena incorrecta";
             cambios.Add(new CambioAuditoria("Motivo", null, motivo));
             if (!resultado.IsLockedOut && !resultado.IsNotAllowed)

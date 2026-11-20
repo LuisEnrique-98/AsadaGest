@@ -49,3 +49,25 @@ h1:focus {
 .darker-border-checkbox.form-check-input {
     border-color: #929292;
 }
+
+/* Sprint 6c: anchos maximos que antes iban en style="..." dentro del HTML. La politica de contenido
+   (CSP) no deja usar estilos escritos en el HTML: todo estilo vive en archivos .css. */
+.ancho-9 {
+    max-width: 9rem;
+}
+
+.ancho-10 {
+    max-width: 10rem;
+}
+
+.ancho-36 {
+    max-width: 36rem;
+}
+
+.ancho-48 {
+    max-width: 48rem;
+}
+
+.ancho-60 {
+    max-width: 60rem;
+}

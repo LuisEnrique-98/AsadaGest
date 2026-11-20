@@ -20,6 +20,7 @@ public static class CambioContrasenaObligatorio
         "/_framework",
         "/_blazor",
         "/_content",
+        PoliticaContenido.RutaAviso,
     ];
 
     public static IApplicationBuilder UseCambioContrasenaObligatorio(this IApplicationBuilder app)

@@ -4,6 +4,7 @@ using Asada.Infraestructura.Identidad;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Npgsql;
 
 namespace Asada.Infraestructura.Persistence.Seed;
 
@@ -16,6 +17,10 @@ namespace Asada.Infraestructura.Persistence.Seed;
 /// Es seguro llamarlo en cada arranque: cada paso verifica primero si el dato ya existe
 /// (usando IgnoreQueryFilters, porque durante el seed todavia no hay ningun usuario
 /// autenticado y el filtro global de organizacion excluiria cualquier resultado).
+///
+/// Sprint 6c (M-3): estas cuentas tienen contrasenas publicas (estan en el repositorio). Si un
+/// servidor arrancara por error en Desarrollo, se crearian alli. Por eso el seed se niega a correr
+/// si la base de datos no esta en la misma maquina (localhost, 127.0.0.1 o ::1).
 /// </summary>
 public static class SeedInicial
 {
@@ -36,6 +41,14 @@ public static class SeedInicial
         var roleManager = alcance.ServiceProvider.GetRequiredService<RoleManager<Rol>>();
         var userManager = alcance.ServiceProvider.GetRequiredService<UserManager<Usuario>>();
         var db = alcance.ServiceProvider.GetRequiredService<AsadaDbContext>();
+
+        if (!EsBaseLocal(db.Database.GetConnectionString()))
+        {
+            throw new InvalidOperationException(
+                "Los datos de desarrollo (usuarios con contrasenas conocidas) solo se crean con una base de " +
+                "datos local (localhost, 127.0.0.1 o ::1). Esta base esta en otro servidor: revise que " +
+                "ASPNETCORE_ENVIRONMENT no sea Development fuera de la PC de desarrollo.");
+        }
 
         foreach (var nombreRol in NombresRol.Todos)
         {
@@ -114,5 +127,40 @@ public static class SeedInicial
 
             await userManager.AddToRoleAsync(superadministrador, NombresRol.Superadministrador);
         }
+    }
+
+    private static readonly string[] ServidoresLocales = ["localhost", "127.0.0.1", "::1", "[::1]"];
+
+    /// <summary>
+    /// True si todos los servidores de la cadena de conexion son la propia maquina. Acepta el
+    /// puerto pegado al nombre ("localhost:5432"). Una cadena vacia o invalida no es local.
+    /// </summary>
+    public static bool EsBaseLocal(string? cadenaConexion)
+    {
+        if (string.IsNullOrWhiteSpace(cadenaConexion)) return false;
+
+        string? servidores;
+        try
+        {
+            servidores = new NpgsqlConnectionStringBuilder(cadenaConexion).Host;
+        }
+        catch (ArgumentException)
+        {
+            return false;
+        }
+        if (string.IsNullOrWhiteSpace(servidores)) return false;
+
+        return servidores.Split(',').All(s => EsServidorLocal(s.Trim().ToLowerInvariant()));
+    }
+
+    private static bool EsServidorLocal(string servidor)
+    {
+        if (ServidoresLocales.Contains(servidor)) return true;
+
+        var dosPuntos = servidor.LastIndexOf(':');
+        return dosPuntos > 0
+            && dosPuntos < servidor.Length - 1
+            && servidor[(dosPuntos + 1)..].All(char.IsAsciiDigit)
+            && ServidoresLocales.Contains(servidor[..dosPuntos]);
     }
 }

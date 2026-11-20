@@ -24,7 +24,7 @@
 
 <h1>Anular recibo @recibo.Numero</h1>
 
-<div class="card mb-3" style="max-width: 48rem">
+<div class="card mb-3 ancho-48">
     <div class="card-body">
         <p class="mb-1"><strong>@recibo.AbonadoCodigo</strong> &middot; @recibo.AbonadoNombre</p>
         <p class="mb-1">@recibo.PropiedadDireccion</p>
@@ -74,7 +74,7 @@
             </div>
 
             <button type="submit" class="btn btn-danger"
-                    onclick="return confirm('¿Anular el recibo? Esta accion no se puede deshacer.')">
+                    data-confirmar="¿Anular el recibo? Esta accion no se puede deshacer.">
                 Anular recibo
             </button>
             <a class="btn btn-link" href="recibos/@recibo.Id">Cancelar</a>
