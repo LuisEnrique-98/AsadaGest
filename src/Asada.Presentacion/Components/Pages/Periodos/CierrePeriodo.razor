@@ -95,7 +95,7 @@ else if (Ok == "reabierto")
 
     @if (!datos.EstaCerrado)
     {
-        <div class="card border-dark mb-3" style="max-width: 48rem">
+        <div class="card border-dark mb-3 ancho-48">
             <div class="card-body">
                 <h2 class="h5">Cerrar el periodo</h2>
                 @if (datos.PuedeCerrarse)
@@ -110,7 +110,7 @@ else if (Ok == "reabierto")
                 @* Sin <AntiforgeryToken />: el EditForm ya incluye el suyo. *@
                 <EditForm Model="ModeloCierre!" method="post" OnValidSubmit="CerrarAsync" FormName="cerrar-periodo">
                     <button type="submit" class="btn btn-dark" disabled="@(!datos.PuedeCerrarse)"
-                            onclick="return confirm('¿Cerrar el periodo? Solo un Administrador lo podra reabrir.')">
+                            data-confirmar="¿Cerrar el periodo? Solo un Administrador lo podra reabrir.">
                         Cerrar @Etiquetas.Periodo(datos.Anio, datos.Mes)
                     </button>
                 </EditForm>
@@ -119,7 +119,7 @@ else if (Ok == "reabierto")
     }
     else
     {
-        <div class="card border-warning mb-3" style="max-width: 48rem">
+        <div class="card border-warning mb-3 ancho-48">
             <div class="card-body">
                 <h2 class="h5">Reabrir el periodo</h2>
                 <p class="text-muted small">

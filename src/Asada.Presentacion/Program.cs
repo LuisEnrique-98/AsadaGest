@@ -5,6 +5,7 @@ using Asada.Infraestructura.Persistence.Seed;
 using Asada.Presentacion;
 using Asada.Presentacion.Components;
 using Asada.Presentacion.Seguridad;
+using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -26,6 +27,11 @@ builder.Services.AddAuthorization(opciones => opciones.AgregarPoliticasAsada());
 // Registra AsadaDbContext, ASP.NET Core Identity, IProveedorOrganizacion y la configuracion
 // de la cookie de autenticacion. Ver InfraestructuraServiceCollectionExtensions.
 builder.Services.AgregarInfraestructura(builder.Configuration);
+
+// Sprint 6c: cookies solo por HTTPS (y con prefijo __Host- en el servidor) y limites de intentos de
+// ingreso y de PDF del periodo. Ver Seguridad/CookiesSeguras.cs y Seguridad/LimitesSolicitudes.cs.
+builder.Services.AgregarCookiesSeguras(builder.Environment);
+builder.Services.AgregarLimitesSolicitudes(builder.Configuration);
 
 // Casos de uso de Asada.Aplicacion (Abonados, Propiedades, Servicios...).
 builder.Services.AgregarCasosDeUso();
@@ -74,9 +80,17 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// Sprint 6c: Content-Security-Policy y Permissions-Policy. Ver Seguridad/PoliticaContenido.cs.
+app.UsePoliticaContenido();
+
 app.UseStaticFiles();
 
 app.UseAuthentication();
+
+// Sprint 6c: despues de UseAuthentication, para que el limite del PDF se cuente por usuario.
+app.UseRateLimiter();
+
 app.UseAuthorization();
 
 // Sprint 5b: con una contrasena temporal solo se puede entrar a cambiarla. Ver Seguridad/CambioContrasenaObligatorio.cs.
@@ -91,14 +105,24 @@ app.MapRazorComponents<App>()
 // Es un endpoint HTTP normal (no un componente Blazor) porque cerrar sesion implica escribir
 // la cookie de autenticacion en la respuesta, algo que un componente interactivo (dentro de
 // una conexion SignalR ya establecida) no puede hacer.
-app.MapPost("/cuenta/cerrar-sesion", async (SignInManager<Usuario> signInManager) =>
+// Sprint 6c (B-1): se valida el token antiforgery que manda el formulario. Sin eso, una pagina de otro
+// sitio podria cerrar la sesion de quien la visite. Si el token no sirve (p. ej. la pagina quedo
+// abierta desde antes de que vencieran las claves), se vuelve al inicio sin cerrar nada; desde ahi el
+// boton ya trae un token nuevo.
+app.MapPost("/cuenta/cerrar-sesion", async (HttpContext contexto, IAntiforgery antiforgery, SignInManager<Usuario> signInManager) =>
 {
+    if (!await antiforgery.IsRequestValidAsync(contexto))
+        return Results.LocalRedirect("/");
+
     await signInManager.SignOutAsync();
     return Results.LocalRedirect("/cuenta/iniciar-sesion");
 });
 
 // Recibos en PDF (Sprint 4): /recibos/{id}/pdf y /recibos/pdf?anio=&mes=. Ver EndpointsRecibos.
 app.MapearEndpointsRecibos();
+
+// Sprint 6c: avisos de la CSP que manda el navegador (quedan en el log).
+app.MapearAvisoCsp();
 
 // Sprint 6a: verificacion de salud para Docker (HEALTHCHECK del Dockerfile). Publica: solo dice si la
 // aplicacion responde y llega a la base de datos, sin ningun dato.

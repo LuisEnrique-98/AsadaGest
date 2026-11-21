@@ -47,6 +47,10 @@ services:
     environment:
       ConnectionStrings__AsadaDb: "Host=postgres;Port=5432;Database=asada_gestion;Username=asada;Password=${POSTGRES_CONTRASENA}"
       Plataforma__CorreoSuperadministrador: ${SUPERADMIN_CORREO:?Falta SUPERADMIN_CORREO en despliegue/.env}
+      # Sprint 6c: modo de la politica de contenido (informe / aplicar) y tope de intentos de ingreso por IP.
+      Seguridad__Csp: ${CSP_MODO:-informe}
+      Seguridad__Limites__IngresosPorMinuto: ${LIMITE_INGRESOS_MINUTO:-10}
+      Seguridad__Limites__IngresosPorHora: ${LIMITE_INGRESOS_HORA:-30}
     volumes:
       - claves_app:/claves
     <<: *registro

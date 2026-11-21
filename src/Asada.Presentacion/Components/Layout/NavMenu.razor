@@ -6,7 +6,8 @@
 
 <input type="checkbox" title="Menu de navegacion" class="navbar-toggler" />
 
-<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
+@* Sprint 6c: al tocar el menu (en pantallas angostas) se cierra; lo hace wwwroot/js/asada.js. *@
+<div class="nav-scrollable" data-cerrar-menu>
     <nav class="flex-column">
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="" Match="NavLinkMatch.All">

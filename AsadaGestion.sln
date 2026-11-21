@@ -19,6 +19,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Asada.Dominio.Tests", "test
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Asada.Aplicacion.Tests", "tests\Asada.Aplicacion.Tests\Asada.Aplicacion.Tests.csproj", "{9A14EC4C-7FE6-4273-8DB4-1A017FA369E9}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Asada.Presentacion.Tests", "tests\Asada.Presentacion.Tests\Asada.Presentacion.Tests.csproj", "{D667BA5E-B9E9-4FE9-9DB3-EC6F283A1EB4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -52,6 +54,10 @@ Global
 		{9A14EC4C-7FE6-4273-8DB4-1A017FA369E9}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9A14EC4C-7FE6-4273-8DB4-1A017FA369E9}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9A14EC4C-7FE6-4273-8DB4-1A017FA369E9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D667BA5E-B9E9-4FE9-9DB3-EC6F283A1EB4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D667BA5E-B9E9-4FE9-9DB3-EC6F283A1EB4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D667BA5E-B9E9-4FE9-9DB3-EC6F283A1EB4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D667BA5E-B9E9-4FE9-9DB3-EC6F283A1EB4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{E9900EA3-2A14-47E8-B70E-98FC8ACFB206} = {7A925E37-1B08-49C2-A0F2-0D5638166253}
@@ -60,5 +66,6 @@ Global
 		{F56CED0B-9FAC-46F5-A79D-3F471A23EA5B} = {7A925E37-1B08-49C2-A0F2-0D5638166253}
 		{2BF8FF6C-BAFB-4DCE-8B29-238104628F30} = {C5E07266-F194-4842-94C7-BC6CFD5A9EC5}
 		{9A14EC4C-7FE6-4273-8DB4-1A017FA369E9} = {C5E07266-F194-4842-94C7-BC6CFD5A9EC5}
+		{D667BA5E-B9E9-4FE9-9DB3-EC6F283A1EB4} = {C5E07266-F194-4842-94C7-BC6CFD5A9EC5}
 	EndGlobalSection
 EndGlobal

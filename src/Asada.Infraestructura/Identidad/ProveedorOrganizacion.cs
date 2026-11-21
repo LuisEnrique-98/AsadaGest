@@ -11,6 +11,11 @@ namespace Asada.Infraestructura.Identidad;
 /// Se registra con ciclo de vida "Scoped" (una instancia por solicitud), igual que
 /// AsadaDbContext, para que el filtro de organizacion sea consistente durante toda
 /// la solicitud.
+///
+/// Sprint 6c (M-1): para ser Superadministrador no basta con no tener el claim de organizacion;
+/// la sesion tambien debe traer el rol Superadministrador. Asi, una sesion sin ese claim por un
+/// error (un usuario mal creado, un cambio futuro en la fabrica de claims) no ve todas las ASADAs:
+/// el filtro de la base no le devuelve nada.
 /// </summary>
 public class ProveedorOrganizacion(IHttpContextAccessor httpContextAccessor) : IProveedorOrganizacion
 {
@@ -30,7 +35,9 @@ public class ProveedorOrganizacion(IHttpContextAccessor httpContextAccessor) : I
         get
         {
             var usuario = httpContextAccessor.HttpContext?.User;
-            return (usuario?.Identity?.IsAuthenticated ?? false) && OrganizacionId is null;
+            return (usuario?.Identity?.IsAuthenticated ?? false)
+                && OrganizacionId is null
+                && usuario.IsInRole(NombresRol.Superadministrador);
         }
     }
 }

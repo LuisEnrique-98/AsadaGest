@@ -524,6 +524,30 @@ docker compose up -d
 git checkout master                        # cuando el problema este corregido, y luego actualizar.sh
 ```
 
+## Seguridad de la aplicacion
+
+Desde el Sprint 6c la aplicacion trae estas protecciones; se ajustan en `.env` y se aplican con
+`docker compose up -d app`:
+
+- **Tope de intentos de ingreso**: desde una misma IP, 10 intentos de iniciar sesion o de cambiar la
+  contrasena por minuto y 30 por hora (`LIMITE_INGRESOS_MINUTO`, `LIMITE_INGRESOS_HORA`). Al pasarse se
+  muestra "Demasiadas solicitudes" y queda una advertencia en el log. En la oficina todos comparten la
+  IP: si el tope molesta, subirlo. Ademas, el PDF de todos los recibos del periodo se genera de a uno
+  por usuario y hasta 10 por minuto.
+- **Politica de contenido (CSP)**: el navegador solo carga scripts y estilos del propio sitio.
+  `CSP_MODO=informe` (por defecto) no bloquea nada: cada cosa que se bloquearia queda en el log. Despues
+  de usar el sistema unos dias, revisar:
+
+  ```bash
+  docker compose logs app | grep "politica de contenido"
+  ```
+
+  Si no aparece nada (o solo extensiones del navegador, que empiezan con `chrome-extension` o
+  `moz-extension`), poner `CSP_MODO=aplicar` y `docker compose up -d app`.
+- **Cookies solo por HTTPS** con prefijo `__Host-`. Al instalar la version del Sprint 6c todos vuelven a
+  iniciar sesion una vez.
+- Revisar intentos rechazados: `docker compose logs app | grep "Limite de solicitudes"`.
+
 ## Pasar a un dominio propio
 
 1. Comprar el dominio y crear un registro **A** que apunte a la IP del servidor (por ejemplo
@@ -553,6 +577,7 @@ df -h /                                                            # espacio en 
 | `app` queda "unhealthy" | `docker compose logs app`; casi siempre la base: `docker compose logs postgres` |
 | Todos salen de su sesion tras actualizar | Normal solo si se borro el volumen `claves_app`; si pasa siempre, revisar que exista (`docker volume ls`) |
 | La subida a Drive/OneDrive falla con "token expired" / "invalid_grant" | Volver a autorizar: `docker compose run --rm --entrypoint rclone respaldo config reconnect gdrive-personal:`. Si pasa cada 7 dias, la app de Google Cloud sigue "En prueba": publicarla (A.0, paso 6) |
+| "Demasiadas solicitudes" al iniciar sesion | Tope de intentos por IP (seccion "Seguridad de la aplicacion"): esperar unos minutos o subir `LIMITE_INGRESOS_MINUTO` / `LIMITE_INGRESOS_HORA` |
 | `no configuration file provided` | El comando `docker compose` se ejecuto fuera de `/opt/asadagest/despliegue` |
 | `rclone : El termino 'rclone' no se reconoce...` en PowerShell | Falta el alias de A.1 (`Set-Alias rclone ...`) en esa ventana, o la ruta no incluye la subcarpeta `rclone-vX-windows-amd64` |
 | `ssh` desde Cloud Shell de Azure responde "Connection closed" | Cloud Shell no tiene su llave privada: conectarse desde PowerShell de la PC (1.c, paso 5) |

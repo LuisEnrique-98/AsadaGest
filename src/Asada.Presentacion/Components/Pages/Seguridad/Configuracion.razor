@@ -66,7 +66,7 @@
             <h2 class="h5">Lecturas</h2>
             <div class="mb-3">
                 <label for="umbral" class="form-label">Umbral de consumo anormal (%)</label>
-                <InputNumber id="umbral" class="form-control" style="max-width: 10rem" @bind-Value="Modelo.PorcentajeConsumoAnormal" />
+                <InputNumber id="umbral" class="form-control ancho-10" @bind-Value="Modelo.PorcentajeConsumoAnormal" />
                 <ValidationMessage For="() => Modelo.PorcentajeConsumoAnormal" />
                 <div class="form-text">
                     Una lectura se marca para revision si su consumo supera el promedio de los ultimos

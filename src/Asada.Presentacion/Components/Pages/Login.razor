@@ -46,6 +46,10 @@
 </div>
 
 @code {
+    public const string MensajeIngresoFallido =
+        "No se pudo iniciar sesion. Revise el correo y la contrasena. Despues de 5 intentos fallidos la cuenta " +
+        "se bloquea por 15 minutos; si el problema sigue, consulte con el Administrador de su ASADA.";
+
     private string? mensajeError;
 
     [SupplyParameterFromForm(FormName = "iniciar-sesion")]
@@ -62,12 +66,11 @@
             return;
         }
 
-        // Sprint 5b: un usuario desactivado (o de una ASADA inactiva) recibe NotAllowed; ver SignInManagerAsada.
-        mensajeError = resultado.IsLockedOut
-            ? "Esta cuenta quedo bloqueada por 15 minutos por demasiados intentos fallidos. El Administrador de su ASADA puede desbloquearla antes."
-            : resultado.IsNotAllowed
-                ? "Su usuario esta desactivado. Consulte con el Administrador de su ASADA."
-                : "Correo o contrasena incorrectos.";
+        // Sprint 6c (A-3): el mismo mensaje para todo. Identity revisa el bloqueo y si el usuario esta
+        // desactivado (SignInManagerAsada) ANTES de comprobar la contrasena; un mensaje distinto le
+        // diria a cualquiera que ese correo existe, sin saber la contrasena. El motivo real queda en la
+        // auditoria, y el Administrador lo ve en la ficha del usuario.
+        mensajeError = MensajeIngresoFallido;
     }
 
     private sealed class ModeloIngreso
